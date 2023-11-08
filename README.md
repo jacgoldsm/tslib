@@ -22,11 +22,13 @@ cookies = pd.DataFrame(
         "n": [10, 20, 15, 12, 40],
     }
 )
-# Define our time series arguments. Set the time-series column, frequency, and start of the time-series.
+# Define our time series arguments. 
+# Set the time-series column, frequency, and start of the time-series.
 cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
 # create a DataFrame with all the gaps in the time-series filled in
 print(cookies.ts.tsfill(cookies_args))
-# create a DataFrame with the lagged value of `favorite`. Note that lag respects gaps in the data,
+# create a DataFrame with the lagged value of `favorite`. 
+# Note that lag respects gaps in the data,
 # so year 2008 has no lag since there's no value for 2007
 print(cookies.ts.with_lag(cookies_args, "favorite", name="previous_favorite"))
 # the same, but with a lead
