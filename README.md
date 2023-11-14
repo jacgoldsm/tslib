@@ -1,7 +1,7 @@
 # tslib
 A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and (and Pyspark, coming soon.)
 
-In Pandas, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series data. `tslib` also grants access to the `.xt` accessor for the same methods applied to panel data. 
+In Pandas, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
 
 ## Getting Started—Time-Series Data
 ```python
@@ -35,6 +35,71 @@ print(cookies.ts.with_lag(cookies_args, "favorite", name="previous_favorite"))
 print(cookies.ts.with_lead(cookies_args, "favorite", name="next_favorite"))
 # the same, but with differencing
 print(cookies.ts.with_difference(cookies_args, "n", name="change_in_panelists"))
+```
+
+## Getting Started: Panel Data
+```python
+import pandas as pd
+from tslib.pandas_api import TimeOpts
+
+# Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.
+dates = [
+    "2000-01-01",
+    "2000-01-01",
+    "2000-01-01",
+    "2000-02-01",
+    "2000-02-01",
+    "2000-02-01",
+    "2000-04-01",
+    "2000-04-01",
+    "2000-05-01",
+    "2000-05-01",
+    "2000-09-01",
+    "2000-09-01",
+    "2000-09-01",
+]
+
+panel = pd.DataFrame(
+    {
+        "id": [1, 2, 3, 1, 2, 3, 1, 2, 1, 3, 1, 2, 3],
+        "date": [pd.to_datetime(date) for date in dates],
+        "sex": ["m", "f", "f", "m", "f", "f", "m", "f", "m", "f", "m", "f", "f"],
+        "credit_score": [
+            750,
+            820,
+            640,
+            760,
+            810,
+            670,
+            740,
+            840,
+            745,
+            620,
+            780,
+            800,
+            630,
+        ],
+    }
+)
+print(panel)
+
+# define our Time-Series options
+panel_args = TimeOpts(
+    ts_column="date",
+    panel_column=panel["id"],
+    start="1999-12-01",
+    end="2000-10-01",
+    freq="1m",
+)
+
+# fill in our complete panel
+print(panel.ts.tsfill(panel_args))
+# create our lagged data with lag of 2, with gaps preserved
+print(panel.ts.with_lag(panel_args,column="credit_score",name="lag_credit",back=2))
+# the same, but with a lead
+print(panel.ts.with_lead(panel_args,column="credit_score",name="lag_credit",forward=2))
+# the same, but with differencing
+print(panel.ts.with_difference(panel_args,column="credit_score",name="credit_change",back=2))
 ```
 
 ## Contributing

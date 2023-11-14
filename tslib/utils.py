@@ -10,7 +10,7 @@ from pandas.api.types import (
     is_scalar,
 )
 from numbers import Number
-from typing import Any,TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class TimeDict:
     data: pd.DataFrame | None = None
     ts_column_name: str | None = None
+    panel_column_name: str | None = None
     original_index: pd.Series | pd.Index | None = None
     complete_time_series: pd.Series | None = None
     freq: pd.offsets.DateOffset | int | float | None = None

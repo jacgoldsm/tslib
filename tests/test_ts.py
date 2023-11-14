@@ -19,9 +19,13 @@ cookies = pd.DataFrame(
 )
 cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
 cookies_full = cookies.ts.tsfill(cookies_args)
-cookies_with_lag = cookies.ts.with_lag(cookies_args, "favorite", name="previous_favorite")
+cookies_with_lag = cookies.ts.with_lag(
+    cookies_args, "favorite", name="previous_favorite"
+)
 cookies_with_lead = cookies.ts.with_lead(cookies_args, "favorite", name="next_favorite")
-cookies_with_diff = cookies.ts.with_difference(cookies_args, "n", name="change_in_panelists")
+cookies_with_diff = cookies.ts.with_difference(
+    cookies_args, "n", name="change_in_panelists"
+)
 
 cookies_date = pd.DataFrame(
     {
@@ -122,11 +126,12 @@ expected_diff["change_in_panelists"] = [None, 10, -5, -3, None]
 expected_diff_date = cookies_date.copy()
 expected_diff_date["change_in_panelists"] = [None, 10, -5, -3, None]
 
-print(cookies_with_lead)
-print(expected_lead)
-def compares_equal(df1: pd.DataFrame, df2: pd.DataFrame,check_dtype:bool=False) -> bool:
+
+def compares_equal(
+    df1: pd.DataFrame, df2: pd.DataFrame, check_dtype: bool = False
+) -> bool:
     try:
-        assert_frame_equal(df1, df2,check_dtype=check_dtype)
+        assert_frame_equal(df1, df2, check_dtype=check_dtype)
         return True
     except AssertionError:
         return False
