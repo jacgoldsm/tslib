@@ -3,7 +3,6 @@ import pandas as pd
 
 from pandas.testing import assert_frame_equal
 
-
 cookies = pd.DataFrame(
     {
         "year": [2000, 2001, 2002, 2003, 2008],
@@ -18,14 +17,11 @@ cookies = pd.DataFrame(
     }
 )
 cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
-cookies_full = cookies.ts.tsfill(cookies_args)
-cookies_with_lag = cookies.ts.with_lag(
-    cookies_args, "favorite", name="previous_favorite"
-)
-cookies_with_lead = cookies.ts.with_lead(cookies_args, "favorite", name="next_favorite")
-cookies_with_diff = cookies.ts.with_difference(
-    cookies_args, "n", name="change_in_panelists"
-)
+cookies_ts = cookies.ts(cookies_args)
+cookies_full = cookies_ts.tsfill()
+cookies_with_lag = cookies_ts.with_lag("previous_favorite", column="favorite")
+cookies_with_lead = cookies_ts.with_lead("next_favorite", column="favorite")
+cookies_with_diff = cookies_ts.with_difference("change_in_panelists", column="n")
 
 cookies_date = pd.DataFrame(
     {
@@ -50,15 +46,12 @@ cookies_date = pd.DataFrame(
     }
 )
 cookies_date_args = TimeOpts(ts_column="year", freq="Y", start="1999-01-01")
-cookies_date_full = cookies_date.ts.tsfill(cookies_date_args)
-cookies_date_with_lag = cookies_date.ts.with_lag(
-    cookies_date_args, "favorite", name="previous_favorite"
-)
-cookies_date_with_lead = cookies_date.ts.with_lead(
-    cookies_date_args, "favorite", name="next_favorite"
-)
-cookies_date_with_diff = cookies_date.ts.with_difference(
-    cookies_date_args, "n", name="change_in_panelists"
+cookies_date_ts = cookies_date.ts(cookies_date_args)
+cookies_date_full = cookies_date_ts.tsfill()
+cookies_date_with_lag = cookies_date_ts.with_lag("previous_favorite", column="favorite")
+cookies_date_with_lead = cookies_date_ts.with_lead("next_favorite", column="favorite")
+cookies_date_with_diff = cookies_date_ts.with_difference(
+    "change_in_panelists", column="n"
 )
 
 

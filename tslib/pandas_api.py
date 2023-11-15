@@ -50,6 +50,10 @@ class TSAccessor:
     def __init__(self, obj: pd.DataFrame):
         self._obj = obj
 
+    def __call__(self, opts: TimeOpts | dict):
+        self._opts = opts
+        return self
+
     def tsset(
         self,
         ts_args: TimeOpts | dict,
@@ -132,8 +136,9 @@ class TSAccessor:
 
     def tsfill(
         self,
-        ts_args: TimeOpts | dict,
+        *,
         method: str | None = None,
+        opts_replacement: TimeOpts | dict | None = None,
         fill_value: Any = None,
         sentinel: str | None = None,
         avoid_float_casts: bool = True,
@@ -157,6 +162,10 @@ class TSAccessor:
             Use Pandas nullable dtypes to avoid casting integer columns
             to float when NAs are filled in.
         """
+        if opts_replacement is not None:
+            ts_args = opts_replacement
+        else:
+            ts_args = self._opts
         is_panel = TimeOpts._extract_opt(ts_args, "panel_column") is not None
         if not is_panel:
             ts = self.tsset(ts_args=ts_args)
@@ -204,101 +213,117 @@ class TSAccessor:
 
     def with_lag(
         self,
-        ts_args: TimeOpts | dict,
-        column: pd.Series | str,
-        name: str | None = None,
+        col_name: str,
+        column: str | pd.Series,
         back: int = 1,
+        *,
+        opts_replacement: TimeOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
         Add a lag column to a Pandas DataFrame
 
         Parameters
         ----------
-        ts_args: TimeOpts or compatible dict
-            Arguments for the time-series structure of the data.
-        column: pandas.Series
+        col_name: str, default None
+            What to name the lag column
+        column: str or pandas.Series
             Column to take the lag of
-        name: str, default None
-            What to name the lag column. Defaults to f"{column.name}_lag"
         back: int, default 1
             How many records to go back. Negative values are "leads"
+        opts_replacement: TimeOpts or compatible dict or None
+            Replace Arguments for the time-series structure of the data.
+            Defaults to the existing TimeOpts arguments from `ts()`
         """
+        if opts_replacement is not None:
+            ts_args = opts_replacement
+        else:
+            ts_args = self._opts
         ts = self.tsset(ts_args=ts_args)
         assert ts.data is not None
         assert ts.freq is not None
-        if isinstance(column, str):
-            col_name = column
+        if isinstance(column,str):
+            column_string: str = column
             column = ts.data[column]
         else:
-            col_name = column.name
-        if name is None:
-            name = f"{col_name}_lag"
+            column_string: str = column.name
+
         if ts.panel_column_name is None:
             if ts.is_date:
                 # pessimisation: we can't reliably predict the next element of the series
                 # if the column is a date, so we have to use the "complete" time series.
                 # Thus, tsfill the data and then use the "shift"-based lag method.
                 # Then filter to the original series.
-                out = ts.data.ts.tsfill(ts_args, sentinel="__sentinel__")
-                out[name] = out[col_name].shift(back)
+                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__")
+                out[col_name] = out[column_string].shift(back)
                 out = out[out["__sentinel__"]]
                 out.drop("__sentinel__", inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame({ts.ts_column_name: lagged_col, name: column})
+                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string]})
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
         out.index = np.arange(len(out.index))
         return out
 
     def with_lead(
         self,
-        ts_args: TimeOpts | dict,
+        col_name: str,
         column: pd.Series | str,
-        name: str | None = None,
         forward=1,
+        opts_replacement: TimeOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
         Add a lead column to a Pandas DataFrame
 
         Parameters
         ----------
-        ts_args: TimeOpts or compatible dict
-            Arguments for the time-series structure of the data.
+        col_name: str, default None
+            What to name the lead column
         column: pandas.Series
             Column to take the lead of
-        name: str, default None
-            What to name the lead column. Defaults to f"{column.name}_lead"
         forward: int, default 1
             How many records to go forward. Negative values are "lags"
+        opts_replacement: TimeOpts or compatible dict or None
+            Replace Arguments for the time-series structure of the data.
+            Defaults to the existing TimeOpts arguments from `ts()`
         """
-        if name is None:
-            name = f"{column.name if isinstance(column,pd.Series) else column}_lead"
-        return self.with_lag(ts_args, column, name, back=-1 * forward)
+        if opts_replacement is not None:
+            ts_args = opts_replacement
+        else:
+            ts_args = self._opts
+        return self.with_lag(col_name, column, back=-1 * forward, opts_replacement=ts_args)
 
     def with_difference(
-        self, ts_args: TimeOpts | dict, column, name=None, back=1
+        self,
+        col_name: str,
+        column: str | pd.Series,
+        back=1,
+        *,
+        opts_replacement: TimeOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
         Add a difference column to a Pandas DataFrame
 
         Parameters
         ----------
-        ts_args: TimeOpts or compatible dict
-            Arguments for the time-series structure of the data.
+        col_name: str, default None
+            What to name the difference column
         column: pandas.Series
             Column to take the difference of
-        name: str, default None
-            What to name the difference column. Defaults to f"{column.name}_diff"
-        fback: int, default 1
+        back: int, default 1
             How many records to go back to compute difference.
+        opts_replacement: TimeOpts or compatible dict or None
+            Replace Arguments for the time-series structure of the data.
+            Defaults to the existing TimeOpts arguments from `ts()`
         """
-        lag = self.with_lag(ts_args, column, "__difference_dummy__", back)[
-            "__difference_dummy__"
-        ]
+        if opts_replacement is not None:
+            ts_args = opts_replacement
+        else:
+            ts_args = self._opts
+        lag = self.with_lag(
+            "__difference_dummy__", column, back, opts_replacement=ts_args
+        )["__difference_dummy__"]
         curr = self._obj[column]
         out = self._obj.copy()
-        if name is None:
-            name = f"{column.name if isinstance(column,pd.Series) else column}_diff"
-        out[name] = curr - lag
+        out[col_name] = curr - lag
         return out

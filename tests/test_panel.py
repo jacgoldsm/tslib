@@ -50,7 +50,8 @@ panel_args = TimeOpts(
     freq="1m",
 )
 
-filled = panel.ts.tsfill(panel_args)
+panel_ts = panel.ts(panel_args)
+filled = panel_ts.tsfill()
 # panel_with_lags = panel.ts.with_lag(panel_args,column="credit_score",name="lag_credit",back=2)
 # panel_with_leads = panel.ts.with_lead(panel_args,column="credit_score",name="lag_credit",forward=2)
 # panel_with_diffs = panel.ts.with_difference(panel_args,column="credit_score",name="credit_change",back=2)
