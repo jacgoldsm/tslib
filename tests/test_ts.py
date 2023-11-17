@@ -124,7 +124,7 @@ def compares_equal(
     df1: pd.DataFrame, df2: pd.DataFrame, check_dtype: bool = False
 ) -> bool:
     try:
-        assert_frame_equal(df1, df2, check_dtype=check_dtype)
+        assert_frame_equal(df1, df2, check_dtype=check_dtype,check_index_type=False)
         return True
     except AssertionError:
         return False

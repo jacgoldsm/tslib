@@ -1,5 +1,6 @@
 from tslib.pandas_api import TimeOpts
 import pandas as pd
+import numpy as np
 
 from pandas.testing import assert_frame_equal
 
@@ -17,6 +18,22 @@ dates = [
     "2000-09-01",
     "2000-09-01",
     "2000-09-01",
+]
+
+nums = [
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    4,
+    4,
+    5,
+    5,
+    9,
+    9,
+    9,
 ]
 
 panel = pd.DataFrame(
@@ -52,9 +69,18 @@ panel_args = TimeOpts(
 
 panel_ts = panel.ts(panel_args)
 filled = panel_ts.tsfill()
-# panel_with_lags = panel.ts.with_lag(panel_args,column="credit_score",name="lag_credit",back=2)
-# panel_with_leads = panel.ts.with_lead(panel_args,column="credit_score",name="lag_credit",forward=2)
-# panel_with_diffs = panel.ts.with_difference(panel_args,column="credit_score",name="credit_change",back=2)
+panel_with_lags = panel_ts.with_lag("lag_credit",column="credit_score",back=2)
+panel_with_leads = panel_ts(panel_args).with_lead("lead_credit",column="credit_score",forward=2)
+panel_with_diffs = panel_ts(panel_args).with_difference("credit_change",column="credit_score",back=2)
+panel_num = panel.copy()
+panel_num['date'] = nums
+panel_args_num = panel_args.assign(freq=1,start=0,end=10)
+panel_num_ts = panel_num.ts(panel_args_num)
+
+filled_num = panel_num_ts.tsfill()
+panel_with_lags_num = panel_num_ts.with_lag("lag_credit",column="credit_score",back=2)
+panel_with_leads_num = panel_num_ts.with_lead("lead_credit",column="credit_score",forward=2)
+panel_with_diffs_num = panel_num_ts.with_difference("credit_change",column="credit_score",back=2)
 
 complete_dates = [
     pd.to_datetime(date)
@@ -72,6 +98,8 @@ complete_dates = [
         "2000-10-01",
     ]
 ]
+
+complete_nums = list(range(11))
 
 scores = [
     None,
@@ -120,16 +148,45 @@ expected_filled = pd.DataFrame(
     }
 )
 
+expected_filled_num = expected_filled.copy()
+expected_filled_num['date'] = np.array(complete_nums * 3)
+
+expected_panel_with_lags = panel.copy()
+expected_panel_with_lags['lag_credit'] = [None,None,None,None,None,None,760,810,None,None,None,None,None]
+expected_panel_with_lags_num = expected_panel_with_lags.copy()
+expected_panel_with_lags_num['date'] = np.array(nums)
+
+expected_panel_with_leads = panel.copy()
+expected_panel_with_leads['lead_credit'] = [None,None,None,740,840,None,None,None,None,None,None,None,None]
+expected_panel_with_leads_num = expected_panel_with_leads.copy()
+expected_panel_with_leads_num['date'] = np.array(nums)
+
+expected_panel_with_diff = panel.copy()
+expected_panel_with_diff['credit_change'] = [None,None,None,None,None,None,-20,30,None,None,None,None,None]
+expected_panel_with_diff_num = expected_panel_with_diff.copy()
+expected_panel_with_diff_num['date'] = np.array(nums)
+
+print(panel_with_lags.index)
+print(expected_panel_with_lags.index)
+
 
 def compares_equal(
     df1: pd.DataFrame, df2: pd.DataFrame, check_dtype: bool = False
 ) -> bool:
     try:
-        assert_frame_equal(df1, df2, check_dtype=check_dtype)
+        assert_frame_equal(df1, df2, check_dtype=check_dtype,check_index_type=False)
         return True
     except AssertionError:
         return False
 
 
+
 def test_panel():
     assert compares_equal(filled, expected_filled)
+    assert compares_equal(filled_num,expected_filled_num)
+    assert compares_equal(panel_with_lags,expected_panel_with_lags)
+    assert compares_equal(panel_with_lags_num,expected_panel_with_lags_num)
+    assert compares_equal(panel_with_leads,expected_panel_with_leads)
+    assert compares_equal(panel_with_leads_num,expected_panel_with_leads_num)
+    assert compares_equal(panel_with_diffs,expected_panel_with_diff)
+    assert compares_equal(panel_with_diffs_num,expected_panel_with_diff_num)

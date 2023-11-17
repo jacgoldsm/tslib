@@ -23,6 +23,21 @@ class TimeOpts:
     start: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
     end: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
 
+    def assign(self,inplace=False,**kwargs) -> TimeOpts | None:
+        import copy
+        if not inplace:
+            out = copy.copy(self)
+        else:
+            out = None
+        for kwarg in kwargs.keys():
+            if kwarg not in ('ts_column','panel_column','freq','start','end'):
+                raise ValueError(f"Invalid option: {kwarg}")
+            if inplace:
+                setattr(self,kwarg,kwargs[kwarg])
+            else:
+                setattr(out,kwarg,kwargs[kwarg])
+        return out
+
     @staticmethod
     def _extract_opt(opts: TimeOpts | dict, opt: str):
         if isinstance(opts, TimeOpts):
@@ -50,7 +65,7 @@ class TSAccessor:
     def __init__(self, obj: pd.DataFrame):
         self._obj = obj
 
-    def __call__(self, opts: TimeOpts | dict):
+    def __call__(self, opts: TimeOpts | dict) -> TSAccessor:
         self._opts = opts
         return self
 
@@ -141,6 +156,7 @@ class TSAccessor:
         opts_replacement: TimeOpts | dict | None = None,
         fill_value: Any = None,
         sentinel: str | None = None,
+        keep_index: bool = False,
         avoid_float_casts: bool = True,
     ) -> pd.DataFrame:
         """
@@ -158,6 +174,9 @@ class TSAccessor:
             If not None, the name of a column indicating if a row was
             present in the original data (True) or was filled in by `tsfill`
             (False)
+        keep_index: bool, default False
+            If True, the index of the data returned will be the index of
+            the original data with null values for filled-in observations
         avoid_float_casts: bool, default True
             Use Pandas nullable dtypes to avoid casting integer columns
             to float when NAs are filled in.
@@ -171,11 +190,13 @@ class TSAccessor:
             ts = self.tsset(ts_args=ts_args)
         else:
             ts = self.tsset(ts_args=ts_args)
-        out = ts.data
-        assert out is not None
+        assert ts.data is not None
+        out = ts.data.copy()
         if sentinel is not None:
             sentinel = str(sentinel)
             out[sentinel] = True
+        if keep_index:
+            out['__index__'] = out.index
         if avoid_float_casts:
             # prevent ints from being turned into floats because of NAs
             out = out.convert_dtypes(
@@ -208,7 +229,11 @@ class TSAccessor:
             out = pd.concat(new_groups, axis=0)  # type: ignore
         if sentinel is not None:
             out[sentinel] = out[sentinel].fillna(False)
-        out.index = np.arange(len(out.index))
+        if keep_index:
+            out.index = np.array(out['__index__'])
+            out.drop("__index__",inplace=True,axis=1)
+        else:
+            out.index = np.arange(len(out.index))
         return out
 
     def with_lag(
@@ -253,16 +278,28 @@ class TSAccessor:
                 # if the column is a date, so we have to use the "complete" time series.
                 # Thus, tsfill the data and then use the "shift"-based lag method.
                 # Then filter to the original series.
-                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__")
+                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
                 out[col_name] = out[column_string].shift(back)
                 out = out[out["__sentinel__"]]
-                out.drop("__sentinel__", inplace=True, axis=1)
+                out.drop(["__sentinel__"], inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
                 new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string]})
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
-        out.index = np.arange(len(out.index))
+        else:
+            if ts.is_date:
+                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
+                out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(back)
+                out = out[out["__sentinel__"]]
+                out.drop(["__sentinel__"], inplace=True, axis=1)
+            else:
+                assert ts.ts_column_name is not None
+                lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
+                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string], ts.panel_column_name:ts.data[ts.panel_column_name]})
+                out = ts.data.merge(new, on=[ts.ts_column_name,ts.panel_column_name], how="left")
+
+        out.sort_index(inplace=True)
         return out
 
     def with_lead(
