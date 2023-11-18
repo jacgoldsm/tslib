@@ -1,1 +1,1 @@
-AUTHORS.md
+../AUTHORS.md

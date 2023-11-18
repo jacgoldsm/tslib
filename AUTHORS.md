@@ -1,2 +1,3 @@
-## Authors
+# Authors
+
 - Jacob Goldsmith
