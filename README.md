@@ -3,6 +3,11 @@ A correct and consistent API for dealing with leads, lags, differences, and fill
 
 In Pandas, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
 
+## Installation
+`tslib` is not currently on PyPI. Install from GitHub with:
+
+`pip install tslib@git+https://github.com/jacgoldsm/tslib`
+
 ## Getting Started—Time-Series Data
 ```python
 import pandas as pd
