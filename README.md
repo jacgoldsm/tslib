@@ -1,5 +1,5 @@
 # tslib
-A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and (and Pyspark, coming soon.)
+A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas (and Pyspark, coming soon.)
 
 In Pandas, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
 
@@ -25,16 +25,18 @@ cookies = pd.DataFrame(
 # Define our time series arguments. 
 # Set the time-series column, frequency, and start of the time-series.
 cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+# define our time-series DataFrame
+cookies_ts = cookies.ts(cookies_args)
 # create a DataFrame with all the gaps in the time-series filled in
-print(cookies.ts.tsfill(cookies_args))
+print(cookies_ts.tsfill())
 # create a DataFrame with the lagged value of `favorite`. 
 # Note that lag respects gaps in the data,
 # so year 2008 has no lag since there's no value for 2007
-print(cookies.ts.with_lag(cookies_args, "favorite", name="previous_favorite"))
+print(cookies_ts.with_lag("previous_favorite",column="favorite"))
 # the same, but with a lead
-print(cookies.ts.with_lead(cookies_args, "favorite", name="next_favorite"))
+print(cookies_ts.with_lead("next_favorite",column="favorite"))
 # the same, but with differencing
-print(cookies.ts.with_difference(cookies_args, "n", name="change_in_panelists"))
+print(cookies_ts.with_difference("change_in_panelists",column="n"))
 ```
 
 ## Getting Started: Panel Data
@@ -92,14 +94,17 @@ panel_args = TimeOpts(
     freq="1m",
 )
 
+# set up our time-series DataFrame
+panel_ts = panel.ts(panel_args)
+
 # fill in our complete panel
-print(panel.ts.tsfill(panel_args))
+print(panel_ts.tsfill())
 # create our lagged data with lag of 2, with gaps preserved
-print(panel.ts.with_lag(panel_args,column="credit_score",name="lag_credit",back=2))
+print(panel_ts.with_lag("lag_credit",column="credit_score",back=2))
 # the same, but with a lead
-print(panel.ts.with_lead(panel_args,column="credit_score",name="lag_credit",forward=2))
+print(panel_ts.with_lead("lag_credit",column="credit_score",forward=2))
 # the same, but with differencing
-print(panel.ts.with_difference(panel_args,column="credit_score",name="credit_change",back=2))
+print(panel_ts.with_difference(name="credit_change",column="credit_score",back=2))
 ```
 
 ## Contributing
