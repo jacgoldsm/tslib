@@ -180,6 +180,51 @@ class TSAccessor:
         avoid_float_casts: bool, default True
             Use Pandas nullable dtypes to avoid casting integer columns
             to float when NAs are filled in.
+
+        
+        Returns:
+            Pandas DataFrame
+        
+        Examples:
+            >>> from tslib.pandas_api import TimeOpts
+            >>> import pandas as pd
+            
+            >>> cookies = pd.DataFrame(
+            ...   {
+            ...        "year": [2000, 2001, 2002, 2003, 2008],
+            ...        "favorite": [
+            ...         "Chocolate Chip",
+            ...         "Chocolate Chip",
+            ...         "Oatmeal Raisin",
+            ...         "Sugar",
+            ...         "M&M",
+            ...    ],
+            ...    "n": [10, 20, 15, 12, 40],
+            ...   }
+            ... )
+            >>> cookies
+               year        favorite   n
+            0  2000  Chocolate Chip  10
+            1  2001  Chocolate Chip  20
+            2  2002  Oatmeal Raisin  15
+            3  2003           Sugar  12
+            4  2008             M&M  40
+            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_ts = cookies.ts(cookies_args)
+            >>> cookies_full = cookies_ts.tsfill()
+            >>> cookies_full
+               year        favorite     n
+            0  1999             NaN  <NA>
+            1  2000  Chocolate Chip    10
+            2  2001  Chocolate Chip    20
+            3  2002  Oatmeal Raisin    15
+            4  2003           Sugar    12
+            5  2004             NaN  <NA>
+            6  2005             NaN  <NA>
+            7  2006             NaN  <NA>
+            8  2007             NaN  <NA>
+            9  2008             M&M    40
+
         """
         if opts_replacement is not None:
             ts_args = opts_replacement
@@ -258,6 +303,44 @@ class TSAccessor:
         opts_replacement: TimeOpts or compatible dict or None
             Replace Arguments for the time-series structure of the data.
             Defaults to the existing TimeOpts arguments from `ts()`
+
+        Returns:
+            Pandas DataFrame
+
+        Examples:
+            >>> from tslib.pandas_api import TimeOpts
+            >>> import pandas as pd
+            
+            >>> cookies = pd.DataFrame(
+            ...   {
+            ...        "year": [2000, 2001, 2002, 2003, 2008],
+            ...        "favorite": [
+            ...         "Chocolate Chip",
+            ...         "Chocolate Chip",
+            ...         "Oatmeal Raisin",
+            ...         "Sugar",
+            ...         "M&M",
+            ...    ],
+            ...    "n": [10, 20, 15, 12, 40],
+            ...   }
+            ... )
+            >>> cookies
+                        0  2000  Chocolate Chip  10
+            1  2001  Chocolate Chip  20
+            2  2002  Oatmeal Raisin  15
+            3  2003           Sugar  12
+            4  2008             M&M  40
+            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_ts = cookies.ts(cookies_args)
+            >>> cookies_lag = cookies_ts.with_lag("previous_favorite", column="favorite")
+            >>> cookies_lag
+               year        favorite   n previous_favorite
+            0  2000  Chocolate Chip  10               NaN
+            1  2001  Chocolate Chip  20    Chocolate Chip
+            2  2002  Oatmeal Raisin  15    Chocolate Chip
+            3  2003           Sugar  12    Oatmeal Raisin
+            4  2008             M&M  40               NaN
+
         """
         if opts_replacement is not None:
             ts_args = opts_replacement
@@ -323,6 +406,43 @@ class TSAccessor:
         opts_replacement: TimeOpts or compatible dict or None
             Replace Arguments for the time-series structure of the data.
             Defaults to the existing TimeOpts arguments from `ts()`
+
+        Returns:
+            Pandas DataFrame
+
+        Examples:
+            >>> from tslib.pandas_api import TimeOpts
+            >>> import pandas as pd
+            
+            >>> cookies = pd.DataFrame(
+            ...   {
+            ...        "year": [2000, 2001, 2002, 2003, 2008],
+            ...        "favorite": [
+            ...         "Chocolate Chip",
+            ...         "Chocolate Chip",
+            ...         "Oatmeal Raisin",
+            ...         "Sugar",
+            ...         "M&M",
+            ...    ],
+            ...    "n": [10, 20, 15, 12, 40],
+            ...   }
+            ... )
+            >>> cookies
+                        0  2000  Chocolate Chip  10
+            1  2001  Chocolate Chip  20
+            2  2002  Oatmeal Raisin  15
+            3  2003           Sugar  12
+            4  2008             M&M  40
+            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_ts = cookies.ts(cookies_args)
+            >>> cookies_lead = cookies_ts.with_lead("next_favorite", column="favorite")
+            >>> cookies_lead
+               year        favorite   n   next_favorite
+            0  2000  Chocolate Chip  10  Chocolate Chip
+            1  2001  Chocolate Chip  20  Oatmeal Raisin
+            2  2002  Oatmeal Raisin  15           Sugar
+            3  2003           Sugar  12             NaN
+            4  2008             M&M  40             NaN
         """
         if opts_replacement is not None:
             ts_args = opts_replacement
@@ -352,6 +472,43 @@ class TSAccessor:
         opts_replacement: TimeOpts or compatible dict or None
             Replace Arguments for the time-series structure of the data.
             Defaults to the existing TimeOpts arguments from `ts()`
+
+        Returns:
+            Pandas DataFrame
+
+        Examples:
+            >>> from tslib.pandas_api import TimeOpts
+            >>> import pandas as pd
+            
+            >>> cookies = pd.DataFrame(
+            ...   {
+            ...        "year": [2000, 2001, 2002, 2003, 2008],
+            ...        "favorite": [
+            ...         "Chocolate Chip",
+            ...         "Chocolate Chip",
+            ...         "Oatmeal Raisin",
+            ...         "Sugar",
+            ...         "M&M",
+            ...    ],
+            ...    "n": [10, 20, 15, 12, 40],
+            ...   }
+            ... )
+            >>> cookies
+            0  2000  Chocolate Chip  10
+            1  2001  Chocolate Chip  20
+            2  2002  Oatmeal Raisin  15
+            3  2003           Sugar  12
+            4  2008             M&M  40
+            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_ts = cookies.ts(cookies_args)
+            >>> cookies_diff = cookies_ts.with_difference("change_in_panelists", column="n")
+            >>> cookies_diff
+               year        favorite   n  change_in_panelists
+            0  2000  Chocolate Chip  10                  NaN
+            1  2001  Chocolate Chip  20                 10.0
+            2  2002  Oatmeal Raisin  15                 -5.0
+            3  2003           Sugar  12                 -3.0
+            4  2008             M&M  40                  NaN
         """
         if opts_replacement is not None:
             ts_args = opts_replacement

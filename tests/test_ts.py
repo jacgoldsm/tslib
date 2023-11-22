@@ -22,6 +22,11 @@ cookies_full = cookies_ts.tsfill()
 cookies_with_lag = cookies_ts.with_lag("previous_favorite", column="favorite")
 cookies_with_lead = cookies_ts.with_lead("next_favorite", column="favorite")
 cookies_with_diff = cookies_ts.with_difference("change_in_panelists", column="n")
+print(cookies)
+print(cookies_full)
+print(cookies_with_lag)
+print(cookies_with_lead)
+print(cookies_with_diff)
 
 cookies_date = pd.DataFrame(
     {
