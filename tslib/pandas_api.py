@@ -162,24 +162,15 @@ class TSAccessor:
         """
         Fill in holes in time-series or panel data
 
-        Parameters
-        ----------
-        ts_args: TimeOpts or compatible dict
-            Arguments for the time-series structure of the data.
-        method: str or None, default None
-            Fill method passed to `pandas.DataFrame.reindex`
-        fill_value: Any, default None
-            Value to fill in NAs passed to `pandas.DataFrame.reindex`
-        sentinel: str, default None
-            If not None, the name of a column indicating if a row was
-            present in the original data (True) or was filled in by `tsfill`
-            (False)
-        keep_index: bool, default False
-            If True, the index of the data returned will be the index of
-            the original data with null values for filled-in observations
-        avoid_float_casts: bool, default True
-            Use Pandas nullable dtypes to avoid casting integer columns
-            to float when NAs are filled in.
+        Args:
+            fill_value: Value to fill in NAs passed to `pandas.DataFrame.reindex`
+            sentinel: If not None, the name of a column indicating if a row was
+                present in the original data (True) or was filled in by `tsfill`
+                (False)
+            keep_index: If True, the index of the data returned will be the index of
+                the original data with null values for filled-in observations
+            avoid_float_casts: Use Pandas nullable dtypes to avoid casting integer columns
+                to float when NAs are filled in.
 
         
         Returns:
@@ -188,7 +179,6 @@ class TSAccessor:
         Examples:
             >>> from tslib.pandas_api import TimeOpts
             >>> import pandas as pd
-            
             >>> cookies = pd.DataFrame(
             ...   {
             ...        "year": [2000, 2001, 2002, 2003, 2008],
@@ -292,17 +282,12 @@ class TSAccessor:
         """
         Add a lag column to a Pandas DataFrame
 
-        Parameters
-        ----------
-        col_name: str, default None
-            What to name the lag column
-        column: str or pandas.Series
-            Column to take the lag of
-        back: int, default 1
-            How many records to go back. Negative values are "leads"
-        opts_replacement: TimeOpts or compatible dict or None
-            Replace Arguments for the time-series structure of the data.
-            Defaults to the existing TimeOpts arguments from `ts()`
+        Args:
+            col_name: What to name the lag column
+            column: Column to take the lag of
+            back: How many records to go back. Negative values are "leads"
+            opts_replacement: Replace Arguments for the time-series structure of the data.
+                Defaults to the existing TimeOpts arguments from `ts()`
 
         Returns:
             Pandas DataFrame
@@ -310,7 +295,6 @@ class TSAccessor:
         Examples:
             >>> from tslib.pandas_api import TimeOpts
             >>> import pandas as pd
-            
             >>> cookies = pd.DataFrame(
             ...   {
             ...        "year": [2000, 2001, 2002, 2003, 2008],
@@ -325,7 +309,8 @@ class TSAccessor:
             ...   }
             ... )
             >>> cookies
-                        0  2000  Chocolate Chip  10
+               year        favorite   n
+            0  2000  Chocolate Chip  10
             1  2001  Chocolate Chip  20
             2  2002  Oatmeal Raisin  15
             3  2003           Sugar  12
@@ -389,23 +374,18 @@ class TSAccessor:
         self,
         col_name: str,
         column: pd.Series | str,
-        forward=1,
+        forward: int | None =1,
         opts_replacement: TimeOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
         Add a lead column to a Pandas DataFrame
 
-        Parameters
-        ----------
-        col_name: str, default None
-            What to name the lead column
-        column: pandas.Series
-            Column to take the lead of
-        forward: int, default 1
-            How many records to go forward. Negative values are "lags"
-        opts_replacement: TimeOpts or compatible dict or None
-            Replace Arguments for the time-series structure of the data.
-            Defaults to the existing TimeOpts arguments from `ts()`
+        Args:
+            col_name: What to name the lead column
+            column: Column to take the lead of
+            forward: How many records to go forward. Negative values are "lags"
+            opts_replacement: Replace Arguments for the time-series structure of the data.
+                Defaults to the existing TimeOpts arguments from `ts()`
 
         Returns:
             Pandas DataFrame
@@ -413,7 +393,6 @@ class TSAccessor:
         Examples:
             >>> from tslib.pandas_api import TimeOpts
             >>> import pandas as pd
-            
             >>> cookies = pd.DataFrame(
             ...   {
             ...        "year": [2000, 2001, 2002, 2003, 2008],
@@ -428,7 +407,8 @@ class TSAccessor:
             ...   }
             ... )
             >>> cookies
-                        0  2000  Chocolate Chip  10
+               year        favorite   n
+            0  2000  Chocolate Chip  10
             1  2001  Chocolate Chip  20
             2  2002  Oatmeal Raisin  15
             3  2003           Sugar  12
@@ -454,24 +434,19 @@ class TSAccessor:
         self,
         col_name: str,
         column: str | pd.Series,
-        back=1,
+        back: int | None =1,
         *,
         opts_replacement: TimeOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
         Add a difference column to a Pandas DataFrame
 
-        Parameters
-        ----------
-        col_name: str, default None
-            What to name the difference column
-        column: pandas.Series
-            Column to take the difference of
-        back: int, default 1
-            How many records to go back to compute difference.
-        opts_replacement: TimeOpts or compatible dict or None
-            Replace Arguments for the time-series structure of the data.
-            Defaults to the existing TimeOpts arguments from `ts()`
+        Args:
+            col_name: What to name the difference column
+            column: Column to take the difference of
+            back: How many records to go back to compute difference.
+            opts_replacement: Replace Arguments for the time-series structure of the data.
+                Defaults to the existing TimeOpts arguments from `ts()`
 
         Returns:
             Pandas DataFrame
@@ -479,7 +454,6 @@ class TSAccessor:
         Examples:
             >>> from tslib.pandas_api import TimeOpts
             >>> import pandas as pd
-            
             >>> cookies = pd.DataFrame(
             ...   {
             ...        "year": [2000, 2001, 2002, 2003, 2008],
@@ -494,6 +468,7 @@ class TSAccessor:
             ...   }
             ... )
             >>> cookies
+               year        favorite   n
             0  2000  Chocolate Chip  10
             1  2001  Chocolate Chip  20
             2  2002  Oatmeal Raisin  15
