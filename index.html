@@ -297,6 +297,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-with-pyspark" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using with PySpark
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#getting-startedtime-series-data" class="md-nav__link">
     <span class="md-ellipsis">
       Getting Started—Time-Series Data
@@ -487,6 +496,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-with-pyspark" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using with PySpark
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#getting-startedtime-series-data" class="md-nav__link">
     <span class="md-ellipsis">
       Getting Started—Time-Series Data
@@ -532,11 +550,18 @@
 
 
 <h1 id="tslib">tslib</h1>
-<p>A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas (and Pyspark, coming soon.)</p>
+<p>A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and PySpark (via pandas-on-Spark).</p>
 <p>In Pandas, importing <code>tslib</code> grants access to the <code>.ts</code> accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. </p>
+<p>All Pandas functionality works equally with <a href="https://spark.apache.org/docs/latest/api/python/user_guide/pandas_on_spark/pandas_pyspark.html">pandas-on-Spark</a> DataFrames.</p>
 <h2 id="installation">Installation</h2>
 <p><code>tslib</code> is not currently on PyPI. Install from GitHub with:</p>
 <p><code>pip install tslib@git+https://github.com/jacgoldsm/tslib</code></p>
+<h2 id="using-with-pyspark">Using with PySpark</h2>
+<p>To use with the normal PySpark DataFrames, sandwich your <code>tslib</code> code as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="n">my_pandas_on_spark</span> <span class="o">=</span> <span class="n">my_spark_df</span><span class="o">.</span><span class="n">pandas_api</span><span class="p">()</span>
+<span class="c1"># Use `tslib` Pandas APIs as normal here</span>
+<span class="n">my_new_spark_df</span> <span class="o">=</span> <span class="n">my_pandas_on_spark</span><span class="o">.</span><span class="n">to_spark</span><span class="p">()</span>
+</code></pre></div>
 <h2 id="getting-startedtime-series-data">Getting Started—Time-Series Data</h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">tslib.pandas_api</span> <span class="kn">import</span> <span class="n">TimeOpts</span>
@@ -555,6 +580,13 @@
         <span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">40</span><span class="p">],</span>
     <span class="p">}</span>
 <span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">cookies</span><span class="p">)</span>
+    <span class="n">year</span>       <span class="n">favorite</span>   <span class="n">n</span>
+<span class="mi">0</span>  <span class="mi">2000</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">10</span>
+<span class="mi">1</span>  <span class="mi">2001</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">20</span>
+<span class="mi">2</span>  <span class="mi">2002</span>  <span class="n">Oatmeal</span> <span class="n">Raisin</span>  <span class="mi">15</span>
+<span class="mi">3</span>  <span class="mi">2003</span>           <span class="n">Sugar</span>  <span class="mi">12</span>
+<span class="mi">4</span>  <span class="mi">2008</span>             <span class="n">M</span><span class="o">&amp;</span><span class="n">M</span>  <span class="mi">40</span>
 <span class="c1"># Define our time series arguments. </span>
 <span class="c1"># Set the time-series column, frequency, and start of the time-series.</span>
 <span class="n">cookies_args</span> <span class="o">=</span> <span class="n">TimeOpts</span><span class="p">(</span><span class="n">ts_column</span><span class="o">=</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1999</span><span class="p">)</span>
@@ -562,14 +594,43 @@
 <span class="n">cookies_ts</span> <span class="o">=</span> <span class="n">cookies</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">cookies_args</span><span class="p">)</span>
 <span class="c1"># create a DataFrame with all the gaps in the time-series filled in</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">cookies_ts</span><span class="o">.</span><span class="n">tsfill</span><span class="p">())</span>
+    <span class="n">year</span>       <span class="n">favorite</span>     <span class="n">n</span>
+<span class="mi">0</span>  <span class="mi">1999</span>             <span class="n">NaN</span>  <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">1</span>  <span class="mi">2000</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>    <span class="mi">10</span>
+<span class="mi">2</span>  <span class="mi">2001</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>    <span class="mi">20</span>
+<span class="mi">3</span>  <span class="mi">2002</span>  <span class="n">Oatmeal</span> <span class="n">Raisin</span>    <span class="mi">15</span>
+<span class="mi">4</span>  <span class="mi">2003</span>           <span class="n">Sugar</span>    <span class="mi">12</span>
+<span class="mi">5</span>  <span class="mi">2004</span>             <span class="n">NaN</span>  <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">6</span>  <span class="mi">2005</span>             <span class="n">NaN</span>  <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">7</span>  <span class="mi">2006</span>             <span class="n">NaN</span>  <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">8</span>  <span class="mi">2007</span>             <span class="n">NaN</span>  <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">9</span>  <span class="mi">2008</span>             <span class="n">M</span><span class="o">&amp;</span><span class="n">M</span>    <span class="mi">40</span>
 <span class="c1"># create a DataFrame with the lagged value of `favorite`. </span>
 <span class="c1"># Note that lag respects gaps in the data,</span>
 <span class="c1"># so year 2008 has no lag since there&#39;s no value for 2007</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">cookies_ts</span><span class="o">.</span><span class="n">with_lag</span><span class="p">(</span><span class="s2">&quot;previous_favorite&quot;</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="s2">&quot;favorite&quot;</span><span class="p">))</span>
+    <span class="n">year</span>       <span class="n">favorite</span>   <span class="n">n</span> <span class="n">previous_favorite</span>
+<span class="mi">0</span>  <span class="mi">2000</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">10</span>               <span class="n">NaN</span>
+<span class="mi">1</span>  <span class="mi">2001</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">20</span>    <span class="n">Chocolate</span> <span class="n">Chip</span>
+<span class="mi">2</span>  <span class="mi">2002</span>  <span class="n">Oatmeal</span> <span class="n">Raisin</span>  <span class="mi">15</span>    <span class="n">Chocolate</span> <span class="n">Chip</span>
+<span class="mi">3</span>  <span class="mi">2003</span>           <span class="n">Sugar</span>  <span class="mi">12</span>    <span class="n">Oatmeal</span> <span class="n">Raisin</span>
+<span class="mi">4</span>  <span class="mi">2008</span>             <span class="n">M</span><span class="o">&amp;</span><span class="n">M</span>  <span class="mi">40</span>               <span class="n">NaN</span>
 <span class="c1"># the same, but with a lead</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">cookies_ts</span><span class="o">.</span><span class="n">with_lead</span><span class="p">(</span><span class="s2">&quot;next_favorite&quot;</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="s2">&quot;favorite&quot;</span><span class="p">))</span>
+   <span class="n">year</span>        <span class="n">favorite</span>   <span class="n">n</span>   <span class="n">next_favorite</span>
+<span class="mi">0</span>  <span class="mi">2000</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">10</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>
+<span class="mi">1</span>  <span class="mi">2001</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">20</span>  <span class="n">Oatmeal</span> <span class="n">Raisin</span>
+<span class="mi">2</span>  <span class="mi">2002</span>  <span class="n">Oatmeal</span> <span class="n">Raisin</span>  <span class="mi">15</span>           <span class="n">Sugar</span>
+<span class="mi">3</span>  <span class="mi">2003</span>           <span class="n">Sugar</span>  <span class="mi">12</span>             <span class="n">NaN</span>
+<span class="mi">4</span>  <span class="mi">2008</span>             <span class="n">M</span><span class="o">&amp;</span><span class="n">M</span>  <span class="mi">40</span>             <span class="n">NaN</span>
 <span class="c1"># the same, but with differencing</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">cookies_ts</span><span class="o">.</span><span class="n">with_difference</span><span class="p">(</span><span class="s2">&quot;change_in_panelists&quot;</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="s2">&quot;n&quot;</span><span class="p">))</span>
+    <span class="n">year</span>       <span class="n">favorite</span>   <span class="n">n</span>  <span class="n">change_in_panelists</span>
+<span class="mi">0</span>  <span class="mi">2000</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">10</span>                  <span class="n">NaN</span>
+<span class="mi">1</span>  <span class="mi">2001</span>  <span class="n">Chocolate</span> <span class="n">Chip</span>  <span class="mi">20</span>                 <span class="mf">10.0</span>
+<span class="mi">2</span>  <span class="mi">2002</span>  <span class="n">Oatmeal</span> <span class="n">Raisin</span>  <span class="mi">15</span>                 <span class="o">-</span><span class="mf">5.0</span>
+<span class="mi">3</span>  <span class="mi">2003</span>           <span class="n">Sugar</span>  <span class="mi">12</span>                 <span class="o">-</span><span class="mf">3.0</span>
+<span class="mi">4</span>  <span class="mi">2008</span>             <span class="n">M</span><span class="o">&amp;</span><span class="n">M</span>  <span class="mi">40</span>                  <span class="n">NaN</span>
 </code></pre></div>
 <h2 id="getting-started-panel-data">Getting Started: Panel Data</h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
@@ -615,7 +676,20 @@
     <span class="p">}</span>
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">panel</span><span class="p">)</span>
-
+    <span class="nb">id</span>       <span class="n">date</span> <span class="n">sex</span>  <span class="n">credit_score</span>
+<span class="mi">0</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">750</span>
+<span class="mi">1</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">820</span>
+<span class="mi">2</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">640</span>
+<span class="mi">3</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">760</span>
+<span class="mi">4</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">810</span>
+<span class="mi">5</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">670</span>
+<span class="mi">6</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">740</span>
+<span class="mi">7</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">840</span>
+<span class="mi">8</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">745</span>
+<span class="mi">9</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">620</span>
+<span class="mi">10</span>   <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">780</span>
+<span class="mi">11</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">800</span>
+<span class="mi">12</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">630</span>
 <span class="c1"># define our Time-Series options</span>
 <span class="n">panel_args</span> <span class="o">=</span> <span class="n">TimeOpts</span><span class="p">(</span>
     <span class="n">ts_column</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
@@ -630,12 +704,88 @@
 
 <span class="c1"># fill in our complete panel</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">panel_ts</span><span class="o">.</span><span class="n">tsfill</span><span class="p">())</span>
+    <span class="nb">id</span>       <span class="n">date</span>  <span class="n">sex</span>  <span class="n">credit_score</span>
+<span class="mi">0</span>    <span class="mi">1</span> <span class="mi">1999</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">1</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>    <span class="n">m</span>           <span class="mi">750</span>
+<span class="mi">2</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>    <span class="n">m</span>           <span class="mi">760</span>
+<span class="mi">3</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">4</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>    <span class="n">m</span>           <span class="mi">740</span>
+<span class="mi">5</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>    <span class="n">m</span>           <span class="mi">745</span>
+<span class="mi">6</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">7</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">07</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">8</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">9</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>    <span class="n">m</span>           <span class="mi">780</span>
+<span class="mi">10</span>   <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">10</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">11</span>   <span class="mi">2</span> <span class="mi">1999</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">12</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">820</span>
+<span class="mi">13</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">810</span>
+<span class="mi">14</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">15</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">840</span>
+<span class="mi">16</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">17</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">18</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">07</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">19</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">20</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">800</span>
+<span class="mi">21</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">10</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">22</span>   <span class="mi">3</span> <span class="mi">1999</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">23</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">640</span>
+<span class="mi">24</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">670</span>
+<span class="mi">25</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">03</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">26</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">27</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">620</span>
+<span class="mi">28</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">06</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">29</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">07</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">30</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">31</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>    <span class="n">f</span>           <span class="mi">630</span>
+<span class="mi">32</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">10</span><span class="o">-</span><span class="mi">01</span>  <span class="n">NaN</span>          <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
 <span class="c1"># create our lagged data with lag of 2, with gaps preserved</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">panel_ts</span><span class="o">.</span><span class="n">with_lag</span><span class="p">(</span><span class="s2">&quot;lag_credit&quot;</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="s2">&quot;credit_score&quot;</span><span class="p">,</span><span class="n">back</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="nb">id</span>       <span class="n">date</span> <span class="n">sex</span>  <span class="n">credit_score</span>  <span class="n">lag_credit</span>
+<span class="mi">0</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">750</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">1</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">820</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">2</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">640</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">3</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">760</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">4</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">810</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">5</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">670</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">6</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">740</span>         <span class="mi">760</span>
+<span class="mi">7</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">840</span>         <span class="mi">810</span>
+<span class="mi">8</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">745</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">9</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">620</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">10</span>   <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">780</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">11</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">800</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">12</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">630</span>        <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
 <span class="c1"># the same, but with a lead</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">panel_ts</span><span class="o">.</span><span class="n">with_lead</span><span class="p">(</span><span class="s2">&quot;lag_credit&quot;</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="s2">&quot;credit_score&quot;</span><span class="p">,</span><span class="n">forward</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="nb">id</span>       <span class="n">date</span> <span class="n">sex</span>  <span class="n">credit_score</span>  <span class="n">lead_credit</span>
+<span class="mi">0</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">750</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">1</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">820</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">2</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">640</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">3</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">760</span>          <span class="mi">740</span>
+<span class="mi">4</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">810</span>          <span class="mi">840</span>
+<span class="mi">5</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">670</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">6</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">740</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">7</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">840</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">8</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">745</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">9</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">620</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">10</span>   <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">780</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">11</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">800</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">12</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">630</span>         <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
 <span class="c1"># the same, but with differencing</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">panel_ts</span><span class="o">.</span><span class="n">with_difference</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;credit_change&quot;</span><span class="p">,</span><span class="n">column</span><span class="o">=</span><span class="s2">&quot;credit_score&quot;</span><span class="p">,</span><span class="n">back</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+    <span class="nb">id</span>       <span class="n">date</span> <span class="n">sex</span>  <span class="n">credit_score</span>  <span class="n">credit_change</span>
+<span class="mi">0</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">750</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">1</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">820</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">2</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">640</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">3</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">760</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">4</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">810</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">5</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">670</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">6</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">740</span>            <span class="o">-</span><span class="mi">20</span>
+<span class="mi">7</span>    <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">04</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">840</span>             <span class="mi">30</span>
+<span class="mi">8</span>    <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">745</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">9</span>    <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">05</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">620</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">10</span>   <span class="mi">1</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">m</span>           <span class="mi">780</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">11</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">800</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
+<span class="mi">12</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">630</span>           <span class="o">&lt;</span><span class="n">NA</span><span class="o">&gt;</span>
 </code></pre></div>
 <h2 id="contributing">Contributing</h2>
 <p>Before making a pull request, run the tests to ensure that none of them are broken. You can do 
