@@ -71,7 +71,15 @@ class TimeOpts:
             return (out.ts_column, out.panel_column, out.freq, out.start, out.end)
 
 
-@pyspark_register_dataframe_accessor("ts")
+def _maybe_pyspark(name):
+    def deco(cls):
+        try:
+            return pyspark_register_dataframe_accessor(cls)
+        except:
+            return cls
+    return deco
+        
+@_maybe_pyspark("ts")
 @pd.api.extensions.register_dataframe_accessor("ts")
 class TSAccessor:
     def __init__(self, obj: pd.DataFrame | ps.DataFrame):
@@ -538,3 +546,4 @@ class TSAccessor:
         out = self._obj.copy()
         out[col_name] = curr - lag
         return out
+
