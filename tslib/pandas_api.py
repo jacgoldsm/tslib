@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pandas as pd
 import numpy as np
-from typing import Any, Iterable
+from typing import Any, Iterable, TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import datetime
 
-from tslib.utils import (
+from tslib.pandas_utils import (
     _is_acceptable_type,
     _is_date,
     _is_numeric,
@@ -14,28 +14,39 @@ from tslib.utils import (
     TimeDict,
 )
 
+try:
+    from pyspark.pandas.extensions import (
+        register_dataframe_accessor as pyspark_register_dataframe_accessor,
+    )
+except ImportError:
+    pass
+
+if TYPE_CHECKING:
+    import pyspark.pandas as ps
+
 
 @dataclass
 class TimeOpts:
-    ts_column: str | pd.Series
-    panel_column: str | pd.Series | None = None
+    ts_column: str | pd.Series | ps.Series
+    panel_column: str | pd.Series | ps.Series | None = None
     freq: int | float | str | pd.offsets.DateOffset | None = None
     start: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
     end: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
 
-    def assign(self,inplace=False,**kwargs) -> TimeOpts | None:
+    def assign(self, inplace=False, **kwargs) -> TimeOpts | None:
         import copy
+
         if not inplace:
             out = copy.copy(self)
         else:
             out = None
         for kwarg in kwargs.keys():
-            if kwarg not in ('ts_column','panel_column','freq','start','end'):
+            if kwarg not in ("ts_column", "panel_column", "freq", "start", "end"):
                 raise ValueError(f"Invalid option: {kwarg}")
             if inplace:
-                setattr(self,kwarg,kwargs[kwarg])
+                setattr(self, kwarg, kwargs[kwarg])
             else:
-                setattr(out,kwarg,kwargs[kwarg])
+                setattr(out, kwarg, kwargs[kwarg])
         return out
 
     @staticmethod
@@ -60,9 +71,20 @@ class TimeOpts:
             return (out.ts_column, out.panel_column, out.freq, out.start, out.end)
 
 
+@pyspark_register_dataframe_accessor("ts")
 @pd.api.extensions.register_dataframe_accessor("ts")
 class TSAccessor:
-    def __init__(self, obj: pd.DataFrame):
+    def __init__(self, obj: pd.DataFrame | ps.DataFrame):
+        try:
+            import pyspark.pandas as ps
+
+            if isinstance(obj, ps.DataFrame):
+                self._engine = ps
+            else:
+                self._engine = pd
+        except ImportError:
+            self._engine = pd
+
         self._obj = obj
 
     def __call__(self, opts: TimeOpts | dict) -> TSAccessor:
@@ -117,7 +139,7 @@ class TSAccessor:
             end = ts_column.max()
 
         if is_date:
-            complete_time_series = pd.period_range(
+            complete_time_series = self._engine.period_range(
                 start=start, end=end, freq=out_dict.freq
             ).to_timestamp()  # type: ignore
         else:
@@ -147,23 +169,25 @@ class TSAccessor:
         out_dict.is_date = is_date
         out_dict.panel_column_name = panel_column_name
         out_dict.data.sort_values(ts_column_name, inplace=True)
+        out_dict.engine = self._engine
         return out_dict
 
     def tsfill(
         self,
         *,
-        method: str | None = None,
-        opts_replacement: TimeOpts | dict | None = None,
         fill_value: Any = None,
+        method: str | None = None,
         sentinel: str | None = None,
         keep_index: bool = False,
         avoid_float_casts: bool = True,
-    ) -> pd.DataFrame:
+        opts_replacement: TimeOpts | dict | None = None,
+    ) -> pd.DataFrame | ps.DataFrame:
         """
         Fill in holes in time-series or panel data
 
         Args:
             fill_value: Value to fill in NAs passed to `pandas.DataFrame.reindex`
+            method: Method of filling in NAs passed to `pandas.DataFrame.reindex`
             sentinel: If not None, the name of a column indicating if a row was
                 present in the original data (True) or was filled in by `tsfill`
                 (False)
@@ -171,11 +195,13 @@ class TSAccessor:
                 the original data with null values for filled-in observations
             avoid_float_casts: Use Pandas nullable dtypes to avoid casting integer columns
                 to float when NAs are filled in.
+            opts_replacement: Replace Arguments for the time-series structure of the data.
+                Defaults to the existing TimeOpts arguments from `ts()`
 
-        
+
         Returns:
             Pandas DataFrame
-        
+
         Examples:
             >>> from tslib.pandas_api import TimeOpts
             >>> import pandas as pd
@@ -221,17 +247,14 @@ class TSAccessor:
         else:
             ts_args = self._opts
         is_panel = TimeOpts._extract_opt(ts_args, "panel_column") is not None
-        if not is_panel:
-            ts = self.tsset(ts_args=ts_args)
-        else:
-            ts = self.tsset(ts_args=ts_args)
+        ts = self.tsset(ts_args=ts_args)
         assert ts.data is not None
         out = ts.data.copy()
         if sentinel is not None:
             sentinel = str(sentinel)
             out[sentinel] = True
         if keep_index:
-            out['__index__'] = out.index
+            out["__index__"] = out.index
         if avoid_float_casts:
             # prevent ints from being turned into floats because of NAs
             out = out.convert_dtypes(
@@ -261,12 +284,12 @@ class TSAccessor:
                 )
                 new_groups[i][ts.ts_column_name] = ts.complete_time_series
                 new_groups[i][ts.panel_column_name] = key
-            out = pd.concat(new_groups, axis=0)  # type: ignore
+            out = ts.engine.concat(new_groups, axis=0)  # type: ignore
         if sentinel is not None:
             out[sentinel] = out[sentinel].fillna(False)
         if keep_index:
-            out.index = np.array(out['__index__'])
-            out.drop("__index__",inplace=True,axis=1)
+            out.index = np.array(out["__index__"])
+            out.drop("__index__", inplace=True, axis=1)
         else:
             out.index = np.arange(len(out.index))
         return out
@@ -278,7 +301,7 @@ class TSAccessor:
         back: int = 1,
         *,
         opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | ps.DataFrame:
         """
         Add a lag column to a Pandas DataFrame
 
@@ -334,7 +357,7 @@ class TSAccessor:
         ts = self.tsset(ts_args=ts_args)
         assert ts.data is not None
         assert ts.freq is not None
-        if isinstance(column,str):
+        if isinstance(column, str):
             column_string: str = column
             column = ts.data[column]
         else:
@@ -346,26 +369,42 @@ class TSAccessor:
                 # if the column is a date, so we have to use the "complete" time series.
                 # Thus, tsfill the data and then use the "shift"-based lag method.
                 # Then filter to the original series.
-                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
+                out = ts.data.ts(ts_args).tsfill(
+                    sentinel="__sentinel__", keep_index=True
+                )
                 out[col_name] = out[column_string].shift(back)
                 out = out[out["__sentinel__"]]
                 out.drop(["__sentinel__"], inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string]})
+                new = ts.engine.DataFrame(
+                    {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
+                )
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
         else:
             if ts.is_date:
-                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
-                out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(back)
+                out = ts.data.ts(ts_args).tsfill(
+                    sentinel="__sentinel__", keep_index=True
+                )
+                out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(
+                    back
+                )
                 out = out[out["__sentinel__"]]
                 out.drop(["__sentinel__"], inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string], ts.panel_column_name:ts.data[ts.panel_column_name]})
-                out = ts.data.merge(new, on=[ts.ts_column_name,ts.panel_column_name], how="left")
+                new = ts.engine.DataFrame(
+                    {
+                        ts.ts_column_name: lagged_col,
+                        col_name: ts.data[column_string],
+                        ts.panel_column_name: ts.data[ts.panel_column_name],
+                    }
+                )
+                out = ts.data.merge(
+                    new, on=[ts.ts_column_name, ts.panel_column_name], how="left"
+                )
 
         out.sort_index(inplace=True)
         return out
@@ -373,10 +412,10 @@ class TSAccessor:
     def with_lead(
         self,
         col_name: str,
-        column: pd.Series | str,
-        forward: int | None =1,
+        column: pd.Series | ps.Series | str,
+        forward: int | None = 1,
         opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | ps.DataFrame:
         """
         Add a lead column to a Pandas DataFrame
 
@@ -428,16 +467,18 @@ class TSAccessor:
             ts_args = opts_replacement
         else:
             ts_args = self._opts
-        return self.with_lag(col_name, column, back=-1 * forward, opts_replacement=ts_args)
+        return self.with_lag(
+            col_name, column, back=-1 * forward, opts_replacement=ts_args
+        )
 
     def with_difference(
         self,
         col_name: str,
         column: str | pd.Series,
-        back: int | None =1,
+        back: int | None = 1,
         *,
         opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | ps.DataFrame:
         """
         Add a difference column to a Pandas DataFrame
 

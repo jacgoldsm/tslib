@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 if TYPE_CHECKING:
     import numpy as np
+    from types import ModuleType
 
 
 @dataclass
@@ -29,6 +30,7 @@ class TimeDict:
     start: pd.Timestamp | np.datetime64 | datetime | None = None
     end: pd.Timestamp | np.datetime64 | datetime | None = None
     is_date: bool | None = None
+    engine: ModuleType | None = None
 
 
 def _is_numeric(ser: pd.Series) -> bool:
