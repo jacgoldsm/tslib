@@ -220,8 +220,11 @@ expected_panel_with_diff_num["date"] = np.array(nums)
 
 import pyspark.pandas as ps
 
+
 def compares_equal(
-    df1: pd.DataFrame | ps.DataFrame, df2: pd.DataFrame | ps.DataFrame, check_dtype: bool = False
+    df1: pd.DataFrame | ps.DataFrame,
+    df2: pd.DataFrame | ps.DataFrame,
+    check_dtype: bool = False,
 ) -> bool:
     if isinstance(df1, ps.DataFrame):
         df1 = df1.to_pandas()
@@ -243,10 +246,14 @@ def test_panel():
     assert compares_equal(panel_with_diffs, expected_panel_with_diff)
     assert compares_equal(panel_with_diffs_num, expected_panel_with_diff_num)
 
-dataframes = [(name,df) for (name,df) in globals().items() if isinstance(df,pd.DataFrame)]
+
+dataframes = [
+    (name, df) for (name, df) in globals().items() if isinstance(df, pd.DataFrame)
+]
 for tup in dataframes:
-    name,df = tup 
+    name, df = tup
     globals()["ps_" + name] = ps.from_pandas(df)
+
 
 def test_panel_ps():
     assert compares_equal(ps_filled, ps_expected_filled)

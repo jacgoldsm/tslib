@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import numpy as np
 from typing import Any, Iterable, TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import datetime
@@ -23,6 +22,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     import pyspark.pandas as ps
+    import numpy as np
 
 
 @dataclass
@@ -116,7 +116,7 @@ class TSAccessor:
             raise Exception(
                 "For a numeric time-series variable" "Frequency must be a number."
             )
-        data.index = np.arange(len(data.index))  # type: ignore
+        data.index = self._engine.RangeIndex(start=0,stop=len(data.index))
         is_date = _is_date(ts_column)
         if is_date:
             out_dict.freq = pd.tseries.frequencies.to_offset(freq)  # type: ignore
@@ -143,9 +143,9 @@ class TSAccessor:
                 start=start, end=end, freq=out_dict.freq
             ).to_timestamp()  # type: ignore
         else:
-            # note that `end` should be inclusive whereas np.arange is top-exclusive
-            complete_time_series = np.arange(
-                start=start, stop=end + freq, step=out_dict.freq
+            # note that `end` should be inclusive whereas RangeIndex is top-exclusive
+            complete_time_series = self._engine.RangeIndex(
+                start=start,stop=end + freq, step=out_dict.freq
             )
         if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
             complete_time_series
@@ -200,7 +200,7 @@ class TSAccessor:
 
 
         Returns:
-            Pandas DataFrame
+            Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
             >>> from tslib.pandas_api import TimeOpts
@@ -288,10 +288,11 @@ class TSAccessor:
         if sentinel is not None:
             out[sentinel] = out[sentinel].fillna(False)
         if keep_index:
-            out.index = np.array(out["__index__"])
+            out.index =out["__index__"]
+            out.index.name = None
             out.drop("__index__", inplace=True, axis=1)
         else:
-            out.index = np.arange(len(out.index))
+            out.index = ts.engine.RangeIndex(0,len(out.index))
         return out
 
     def with_lag(
@@ -313,7 +314,7 @@ class TSAccessor:
                 Defaults to the existing TimeOpts arguments from `ts()`
 
         Returns:
-            Pandas DataFrame
+            Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
             >>> from tslib.pandas_api import TimeOpts
@@ -427,7 +428,7 @@ class TSAccessor:
                 Defaults to the existing TimeOpts arguments from `ts()`
 
         Returns:
-            Pandas DataFrame
+            Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
             >>> from tslib.pandas_api import TimeOpts
@@ -490,7 +491,7 @@ class TSAccessor:
                 Defaults to the existing TimeOpts arguments from `ts()`
 
         Returns:
-            Pandas DataFrame
+            Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
             >>> from tslib.pandas_api import TimeOpts

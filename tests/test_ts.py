@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from tslib.pandas_api import TimeOpts
 import pandas as pd
 
@@ -127,8 +129,11 @@ expected_diff_date["change_in_panelists"] = [None, 10, -5, -3, None]
 
 import pyspark.pandas as ps
 
+
 def compares_equal(
-    df1: pd.DataFrame | ps.DataFrame, df2: pd.DataFrame | ps.DataFrame, check_dtype: bool = False
+    df1: pd.DataFrame | ps.DataFrame,
+    df2: pd.DataFrame | ps.DataFrame,
+    check_dtype: bool = False,
 ) -> bool:
     if isinstance(df1, ps.DataFrame):
         df1 = df1.to_pandas()
@@ -139,6 +144,7 @@ def compares_equal(
     except AssertionError:
         return False
 
+print(cookies_full)
 
 def test_cookies():
     assert compares_equal(cookies_date_full, expected_filled_date)
@@ -151,10 +157,14 @@ def test_cookies():
     assert compares_equal(cookies_with_lead, expected_lead)
     assert compares_equal(cookies_with_diff, expected_diff)
 
-dataframes = [(name,df) for (name,df) in globals().items() if isinstance(df,pd.DataFrame)]
+
+dataframes = [
+    (name, df) for (name, df) in globals().items() if isinstance(df, pd.DataFrame)
+]
 for tup in dataframes:
-    name,df = tup 
+    name, df = tup
     globals()["ps_" + name] = ps.from_pandas(df)
+
 
 def test_cookies_ps():
     assert compares_equal(ps_cookies_date_full, ps_expected_filled_date)
@@ -166,4 +176,3 @@ def test_cookies_ps():
     assert compares_equal(ps_cookies_with_lag, ps_expected_lag)
     assert compares_equal(ps_cookies_with_lead, ps_expected_lead)
     assert compares_equal(ps_cookies_with_diff, ps_expected_diff)
-
