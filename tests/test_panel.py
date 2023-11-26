@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from tslib.pandas_api import TimeOpts
 import pandas as pd
+import pyspark.pandas as ps
 import numpy as np
 
 from pandas.testing import assert_frame_equal
@@ -61,6 +62,8 @@ panel = pd.DataFrame(
     }
 )
 
+ps_panel = ps.DataFrame(panel)
+
 panel_args = TimeOpts(
     ts_column="date",
     panel_column=panel["id"],
@@ -70,25 +73,44 @@ panel_args = TimeOpts(
 )
 
 panel_ts = panel.ts(panel_args)
+ps_panel_ts = ps_panel.ts(panel_args)
 filled = panel_ts.tsfill()
+ps_filled = ps_panel_ts.tsfill()
 panel_with_lags = panel_ts.with_lag("lag_credit", column="credit_score", back=2)
-panel_with_leads = panel_ts(panel_args).with_lead(
+ps_panel_with_lags = ps_panel_ts.with_lag("lag_credit", column="credit_score", back=2)
+panel_with_leads = panel_ts.with_lead(
     "lead_credit", column="credit_score", forward=2
 )
-panel_with_diffs = panel_ts(panel_args).with_difference(
+ps_panel_with_leads = ps_panel_ts.with_lead(
+    "lead_credit", column="credit_score", forward=2
+)
+panel_with_diffs = panel_ts.with_difference(
+    "credit_change", column="credit_score", back=2
+)
+ps_panel_with_diffs = ps_panel_ts.with_difference(
     "credit_change", column="credit_score", back=2
 )
 panel_num = panel.copy()
 panel_num["date"] = nums
+ps_panel_num = ps.DataFrame(panel_num)
 panel_args_num = panel_args.assign(freq=1, start=0, end=10)
 panel_num_ts = panel_num.ts(panel_args_num)
+ps_panel_num_ts = ps_panel_num.ts(panel_args_num)
 
 filled_num = panel_num_ts.tsfill()
+ps_filled_num = ps_panel_num_ts.tsfill()
 panel_with_lags_num = panel_num_ts.with_lag("lag_credit", column="credit_score", back=2)
+ps_panel_with_lags_num = ps_panel_num_ts.with_lag("lag_credit", column="credit_score", back=2)
 panel_with_leads_num = panel_num_ts.with_lead(
     "lead_credit", column="credit_score", forward=2
 )
+ps_panel_with_leads_num = ps_panel_num_ts.with_lead(
+    "lead_credit", column="credit_score", forward=2
+)
 panel_with_diffs_num = panel_num_ts.with_difference(
+    "credit_change", column="credit_score", back=2
+)
+ps_panel_with_diffs_num = ps_panel_num_ts.with_difference(
     "credit_change", column="credit_score", back=2
 )
 
@@ -157,9 +179,11 @@ expected_filled = pd.DataFrame(
         "credit_score": scores,
     }
 )
+ps_expected_filled = ps.DataFrame(expected_filled)
 
 expected_filled_num = expected_filled.copy()
 expected_filled_num["date"] = np.array(complete_nums * 3)
+ps_expected_filled_num = ps.DataFrame(expected_filled_num)
 
 expected_panel_with_lags = panel.copy()
 expected_panel_with_lags["lag_credit"] = [
@@ -177,8 +201,10 @@ expected_panel_with_lags["lag_credit"] = [
     None,
     None,
 ]
+ps_expected_panel_with_lags = ps.DataFrame(expected_panel_with_lags)
 expected_panel_with_lags_num = expected_panel_with_lags.copy()
 expected_panel_with_lags_num["date"] = np.array(nums)
+ps_expected_panel_with_lags_num = ps.DataFrame(expected_panel_with_lags_num)
 
 expected_panel_with_leads = panel.copy()
 expected_panel_with_leads["lead_credit"] = [
@@ -196,8 +222,10 @@ expected_panel_with_leads["lead_credit"] = [
     None,
     None,
 ]
+ps_expected_panel_with_leads = ps.DataFrame(expected_panel_with_leads)
 expected_panel_with_leads_num = expected_panel_with_leads.copy()
 expected_panel_with_leads_num["date"] = np.array(nums)
+ps_expected_panel_with_leads_num = ps.DataFrame(expected_panel_with_leads_num)
 
 expected_panel_with_diff = panel.copy()
 expected_panel_with_diff["credit_change"] = [
@@ -215,10 +243,10 @@ expected_panel_with_diff["credit_change"] = [
     None,
     None,
 ]
+ps_expected_panel_with_diff = ps.DataFrame(expected_panel_with_diff)
 expected_panel_with_diff_num = expected_panel_with_diff.copy()
 expected_panel_with_diff_num["date"] = np.array(nums)
-
-import pyspark.pandas as ps
+ps_expected_panel_with_diff_num = ps.DataFrame(expected_panel_with_diff_num)
 
 
 def compares_equal(
@@ -247,13 +275,6 @@ def test_panel():
     assert compares_equal(panel_with_diffs_num, expected_panel_with_diff_num)
 
 
-dataframes = [
-    (name, df) for (name, df) in globals().items() if isinstance(df, pd.DataFrame)
-]
-for tup in dataframes:
-    name, df = tup
-    globals()["ps_" + name] = ps.from_pandas(df)
-
 
 def test_panel_ps():
     assert compares_equal(ps_filled, ps_expected_filled)
@@ -265,6 +286,3 @@ def test_panel_ps():
     assert compares_equal(ps_panel_with_diffs, ps_expected_panel_with_diff)
     assert compares_equal(ps_panel_with_diffs_num, ps_expected_panel_with_diff_num)
 
-
-print(ps_filled)
-print(ps_expected_filled)

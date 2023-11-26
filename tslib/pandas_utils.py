@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import numpy as np
 from warnings import warn
 from pandas.api.types import (
     is_numeric_dtype,
@@ -18,6 +19,12 @@ if TYPE_CHECKING:
     import numpy as np
     from types import ModuleType
 
+
+def _range(engine):
+    if engine == pd:
+        return np.arange
+    else:
+        return engine.range
 
 @dataclass
 class TimeDict:

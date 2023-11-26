@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import numpy as np
 from typing import Any, Iterable, TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,6 +12,7 @@ from tslib.pandas_utils import (
     _is_numeric,
     _is_numeric_scalar,
     TimeDict,
+    _range,
 )
 
 try:
@@ -71,21 +73,35 @@ class TimeOpts:
             return (out.ts_column, out.panel_column, out.freq, out.start, out.end)
 
 
-def _maybe_pyspark(name):
-    def deco(cls):
+def _maybe_pyspark(name: str):
+    def deco(cls: type):
         try:
-            return pyspark_register_dataframe_accessor(cls)
-        except:
+            return pyspark_register_dataframe_accessor(name)(cls)
+        except Exception:
             return cls
     return deco
         
+
+# _maybe_pyspark("ts")(TSAccessor)
+# _maybe_pyspark("ts") returns
+# def deco(cls):
+#   try:
+#     return pyspark_register_dataframe_accessor("ts")
+#   except Exception:
+#     return cls
+#
+# so deco(TSAccessor) either returns
+# pyspark_register_dataframe_accessor("ts")(TSAccessor)
+# or TSAccessor
+
+
 @_maybe_pyspark("ts")
 @pd.api.extensions.register_dataframe_accessor("ts")
 class TSAccessor:
     def __init__(self, obj: pd.DataFrame | ps.DataFrame):
         try:
             import pyspark.pandas as ps
-
+            ps.set_option('compute.ops_on_diff_frames', True)
             if isinstance(obj, ps.DataFrame):
                 self._engine = ps
             else:
@@ -124,7 +140,7 @@ class TSAccessor:
             raise Exception(
                 "For a numeric time-series variable" "Frequency must be a number."
             )
-        data.index = self._engine.RangeIndex(start=0,stop=len(data.index))
+        data.reset_index(drop=True)
         is_date = _is_date(ts_column)
         if is_date:
             out_dict.freq = pd.tseries.frequencies.to_offset(freq)  # type: ignore
@@ -147,18 +163,24 @@ class TSAccessor:
             end = ts_column.max()
 
         if is_date:
-            complete_time_series = self._engine.period_range(
+            # we don't have a way of making the complete time series in Spark right now,
+            # so we're limited to Pandas-sized time series. That's probably fine though not ideal:
+            # we can still have a time series for every minute since 1950 without issue
+            complete_time_series = pd.period_range(
                 start=start, end=end, freq=out_dict.freq
             ).to_timestamp()  # type: ignore
+            if self._engine != pd:
+                complete_time_series = self._engine.from_pandas(complete_time_series)
         else:
-            # note that `end` should be inclusive whereas RangeIndex is top-exclusive
-            complete_time_series = self._engine.RangeIndex(
-                start=start,stop=end + freq, step=out_dict.freq
+            # note that `end` should be inclusive whereas range is top-exclusive
+            complete_time_series = _range(self._engine)(
+                start, end + freq, out_dict.freq
             )
-        if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
-            complete_time_series
-        ):
-            raise Exception("Time series structure doesn't match frequency specified.")
+        if self._engine == pd:
+            if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
+                complete_time_series
+            ):
+                raise Exception("Time series structure doesn't match frequency specified.")
 
         if panel_column is not None:
             if isinstance(panel_column, (str, bytes)):
@@ -195,14 +217,15 @@ class TSAccessor:
 
         Args:
             fill_value: Value to fill in NAs passed to `pandas.DataFrame.reindex`
-            method: Method of filling in NAs passed to `pandas.DataFrame.reindex`
+            method: Method of filling in NAs passed to `pandas.DataFrame.reindex`.
+                Not available on PySpark.
             sentinel: If not None, the name of a column indicating if a row was
                 present in the original data (True) or was filled in by `tsfill`
                 (False)
             keep_index: If True, the index of the data returned will be the index of
                 the original data with null values for filled-in observations
             avoid_float_casts: Use Pandas nullable dtypes to avoid casting integer columns
-                to float when NAs are filled in.
+                to float when NAs are filled in. Has no effect for `pyspark.pandas` DataFrames.
             opts_replacement: Replace Arguments for the time-series structure of the data.
                 Defaults to the existing TimeOpts arguments from `ts()`
 
@@ -256,6 +279,8 @@ class TSAccessor:
             ts_args = self._opts
         is_panel = TimeOpts._extract_opt(ts_args, "panel_column") is not None
         ts = self.tsset(ts_args=ts_args)
+        if method is not None and ts.engine != pd:
+            raise Exception("`method` argument not available for PySpark DataFrames")
         assert ts.data is not None
         out = ts.data.copy()
         if sentinel is not None:
@@ -263,44 +288,57 @@ class TSAccessor:
             out[sentinel] = True
         if keep_index:
             out["__index__"] = out.index
-        if avoid_float_casts:
+        if avoid_float_casts and ts.engine == pd:
             # prevent ints from being turned into floats because of NAs
             out = out.convert_dtypes(
                 convert_string=False, infer_objects=False, convert_floating=False  # type: ignore
             )
 
-        assert ts.ts_column_name is not None
         if not is_panel:
-            assert isinstance(ts.complete_time_series, Iterable)
-            out.index = out[ts.ts_column_name]  # type: ignore
-            out = out.reindex(
-                ts.complete_time_series, method=method, fill_value=fill_value
-            )
-            out[ts.ts_column_name] = ts.complete_time_series
+            out.set_index(ts.ts_column_name,drop=True,inplace=True)
+            out.index.name = None
+            if ts.engine == pd:
+                out = out.reindex(
+                    ts.complete_time_series, method=method, fill_value=fill_value
+                )
+            else:
+                ts.complete_time_series.name = None
+                out = out.reindex(
+                    ts.complete_time_series, fill_value=fill_value
+                )
+            out.index.name = "__temporary_index__"
+            out.reset_index(drop=False,inplace=True) # this will create a column called "__temporary_index__"
+            out.rename(columns={"__temporary_index__":ts.ts_column_name},inplace=True)
+            out.index.name = None
 
         else:
-            assert ts.panel_column_name is not None
-            out.index = out[ts.ts_column_name]  # type: ignore
+            out.set_index(ts.ts_column_name,drop=False,inplace=True)
+            out.index.name = None
             out_grouped = out.groupby(ts.panel_column_name)
-            new_groups: list[None | pd.DataFrame] = [
+            new_groups: list[None | pd.DataFrame | ps.DataFrame] = [
                 None for _ in range(len(out_grouped))
             ]
             for i, (key, _) in zip(range(len(out_grouped)), out_grouped.groups.items()):
                 subset = out.loc[out[ts.panel_column_name] == key]
-                new_groups[i] = subset.reindex(
+                if ts.engine == pd:
+                    new_groups[i] = subset.reindex(
                     ts.complete_time_series, method=method, fill_value=fill_value
-                )
+                    )
+                else:
+                    ts.complete_time_series.name = None
+                    new_groups[i] = subset.reindex(
+                    ts.complete_time_series, fill_value=fill_value
+                    )
                 new_groups[i][ts.ts_column_name] = ts.complete_time_series
                 new_groups[i][ts.panel_column_name] = key
             out = ts.engine.concat(new_groups, axis=0)  # type: ignore
         if sentinel is not None:
-            out[sentinel] = out[sentinel].fillna(False)
+            out.fillna({sentinel:False},inplace=True)
         if keep_index:
-            out.index =out["__index__"]
+            out.set_index("__index__",drop=True,inplace=True)
             out.index.name = None
-            out.drop("__index__", inplace=True, axis=1)
         else:
-            out.index = ts.engine.RangeIndex(0,len(out.index))
+            out.reset_index(drop=True,inplace=True)
         return out
 
     def with_lag(
@@ -383,13 +421,21 @@ class TSAccessor:
                 )
                 out[col_name] = out[column_string].shift(back)
                 out = out[out["__sentinel__"]]
-                out.drop(["__sentinel__"], inplace=True, axis=1)
+                if ts.engine == pd:
+                    out.drop(["__sentinel__"], inplace=True, axis=1)
+                else:
+                    out = out.drop(["__sentinel__"], axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = ts.engine.DataFrame(
-                    {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
-                )
+                if ts.engine == pd:
+                    new = ts.engine.DataFrame(
+                        {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
+                    )
+                else: # Why does pyspark.pandas require us to do this???
+                    new = ts.engine.DataFrame(index=ts.data.index)
+                    new[ts.ts_column_name] = lagged_col
+                    new[col_name] = ts.data[column_string]
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
         else:
             if ts.is_date:
@@ -399,18 +445,26 @@ class TSAccessor:
                 out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(
                     back
                 )
-                out = out[out["__sentinel__"]]
-                out.drop(["__sentinel__"], inplace=True, axis=1)
+                if ts.engine == pd:
+                    out.drop(["__sentinel__"], inplace=True, axis=1)
+                else:
+                    out = out.drop(["__sentinel__"], axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = ts.engine.DataFrame(
-                    {
-                        ts.ts_column_name: lagged_col,
-                        col_name: ts.data[column_string],
-                        ts.panel_column_name: ts.data[ts.panel_column_name],
-                    }
-                )
+                if ts.engine == pd:
+                    new = ts.engine.DataFrame(
+                        {
+                            ts.ts_column_name: lagged_col,
+                            col_name: ts.data[column_string],
+                            ts.panel_column_name: ts.data[ts.panel_column_name],
+                        }
+                    )
+                else: 
+                    new = ts.engine.DataFrame(index=ts.data.index)
+                    new[ts.ts_column_name] = lagged_col
+                    new[col_name] = ts.data[column_string]
+                    new[ts.panel_column_name] = ts.data[ts.panel_column_name]
                 out = ts.data.merge(
                     new, on=[ts.ts_column_name, ts.panel_column_name], how="left"
                 )
