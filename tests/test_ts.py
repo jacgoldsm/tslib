@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from tslib.pandas_api import TimeOpts
+from tslib.pandas_api import PandasOpts
+from tslib.pyspark_api import SparkOpts
 import pandas as pd
-import pyspark.pandas as ps
-
-
+from pyspark.sql import SparkSession
+import numpy as np
+from pyspark.sql.dataframe import DataFrame
+spark = SparkSession.builder.getOrCreate()
 from pandas.testing import assert_frame_equal
 
 cookies = pd.DataFrame(
@@ -20,8 +22,8 @@ cookies = pd.DataFrame(
         "n": [10, 20, 15, 12, 40],
     }
 )
-cookies_ps = ps.DataFrame(cookies)
-cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+cookies_ps = spark.createDataFrame(cookies)
+cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
 cookies_ts = cookies.ts(cookies_args)
 ps_cookies_ts = cookies_ps.ts(cookies_args)
 cookies_full = cookies_ts.tsfill()
@@ -57,8 +59,8 @@ cookies_date = pd.DataFrame(
     }
 )
 
-ps_cookies_date = ps.DataFrame(cookies_date)
-cookies_date_args = TimeOpts(ts_column="year", freq="Y", start="1999-01-01")
+ps_cookies_date = spark.createDataFrame(cookies_date)
+cookies_date_args = PandasOpts(ts_column="year", freq="Y", start="1999-01-01")
 cookies_date_ts = cookies_date.ts(cookies_date_args)
 ps_cookies_date_ts = ps_cookies_date.ts(cookies_date_args)
 cookies_date_full = cookies_date_ts.tsfill()
@@ -92,10 +94,10 @@ expected_filled = pd.DataFrame(
         "n": [None, 10, 20, 15, 12, None, None, None, None, 40],
     }
 )
-ps_expected_filled = ps.DataFrame(expected_filled)
+ps_expected_filled = spark.createDataFrame(expected_filled)
 expected_filled_date = expected_filled.copy()
 expected_filled_date.year = [pd.to_datetime(f"{i}-01-01") for i in expected_filled.year]
-ps_expected_filled_date = ps.DataFrame(expected_filled)
+ps_expected_filled_date = spark.createDataFrame(expected_filled_date)
 
 expected_lag = cookies.copy()
 expected_lag["previous_favorite"] = [
@@ -105,7 +107,7 @@ expected_lag["previous_favorite"] = [
     "Oatmeal Raisin",
     None,
 ]
-ps_expected_lag = ps.DataFrame(expected_lag)
+ps_expected_lag = spark.createDataFrame(expected_lag)
 
 expected_lag_date = cookies_date.copy()
 expected_lag_date["previous_favorite"] = [
@@ -115,7 +117,7 @@ expected_lag_date["previous_favorite"] = [
     "Oatmeal Raisin",
     None,
 ]
-ps_expected_lag_date = ps.DataFrame(expected_lag)
+ps_expected_lag_date = spark.createDataFrame(expected_lag_date)
 
 expected_lead = cookies.copy()
 expected_lead["next_favorite"] = [
@@ -125,7 +127,7 @@ expected_lead["next_favorite"] = [
     None,
     None,
 ]
-ps_expected_lead = ps.DataFrame(expected_lead)
+ps_expected_lead = spark.createDataFrame(expected_lead)
 
 expected_lead_date = cookies_date.copy()
 expected_lead_date["next_favorite"] = [
@@ -135,26 +137,28 @@ expected_lead_date["next_favorite"] = [
     None,
     None,
 ]
-ps_expected_lead_date = ps.DataFrame(expected_lead_date)
+ps_expected_lead_date = spark.createDataFrame(expected_lead_date)
 
 expected_diff = cookies.copy()
 expected_diff["change_in_panelists"] = [None, 10, -5, -3, None]
-ps_expected_diff = ps.DataFrame(expected_diff)
+ps_expected_diff = spark.createDataFrame(expected_diff)
 
 expected_diff_date = cookies_date.copy()
 expected_diff_date["change_in_panelists"] = [None, 10, -5, -3, None]
-ps_expected_diff_date = ps.DataFrame(expected_diff_date)
+ps_expected_diff_date = spark.createDataFrame(expected_diff_date)
 
 
 
 def compares_equal(
-    df1: pd.DataFrame | ps.DataFrame,
-    df2: pd.DataFrame | ps.DataFrame,
+    df1: pd.DataFrame | DataFrame,
+    df2: pd.DataFrame | DataFrame,
     check_dtype: bool = False,
 ) -> bool:
-    if isinstance(df1, ps.DataFrame):
-        df1 = df1.to_pandas()
-        df2 = df2.to_pandas()
+    if isinstance(df1, DataFrame):
+        df1 = df1.toPandas().sort_values("year")
+        df2 = df2.toPandas().sort_values("year")
+        df1.index = np.arange(len(df1.index))
+        df2.index = np.arange(len(df2.index))
     try:
         assert_frame_equal(df1, df2, check_dtype=check_dtype, check_index_type=False)
         return True

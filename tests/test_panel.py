@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from tslib.pandas_api import TimeOpts
+from tslib.pandas_api import PandasOpts
+from tslib.pyspark_api import SparkOpts
 import pandas as pd
 import pyspark.pandas as ps
 import numpy as np
@@ -64,7 +65,7 @@ panel = pd.DataFrame(
 
 ps_panel = ps.DataFrame(panel)
 
-panel_args = TimeOpts(
+panel_args = PandasOpts(
     ts_column="date",
     panel_column=panel["id"],
     start="1999-12-01",

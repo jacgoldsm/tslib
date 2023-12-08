@@ -15,27 +15,19 @@ from tslib.pandas_utils import (
     _range,
 )
 
-try:
-    from pyspark.pandas.extensions import (
-        register_dataframe_accessor as pyspark_register_dataframe_accessor,
-    )
-except ImportError:
-    pass
-
 if TYPE_CHECKING:
-    import pyspark.pandas as ps
     import numpy as np
 
 
 @dataclass
-class TimeOpts:
-    ts_column: str | pd.Series | ps.Series
-    panel_column: str | pd.Series | ps.Series | None = None
+class PandasOpts:
+    ts_column: str | pd.Series
+    panel_column: str | pd.Series | None = None
     freq: int | float | str | pd.offsets.DateOffset | None = None
     start: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
     end: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
 
-    def assign(self, inplace=False, **kwargs) -> TimeOpts | None:
+    def assign(self, inplace=False, **kwargs) -> PandasOpts | None:
         import copy
 
         if not inplace:
@@ -52,18 +44,18 @@ class TimeOpts:
         return out
 
     @staticmethod
-    def _extract_opt(opts: TimeOpts | dict, opt: str):
-        if isinstance(opts, TimeOpts):
+    def _extract_opt(opts: PandasOpts | dict, opt: str):
+        if isinstance(opts, PandasOpts):
             return getattr(opts, opt)
         else:
             return opts[opt]
 
     @staticmethod
-    def _extract_opts(opts: TimeOpts | dict):
-        if isinstance(opts, TimeOpts):
+    def _extract_opts(opts: PandasOpts | dict):
+        if isinstance(opts, PandasOpts):
             return (opts.ts_column, opts.panel_column, opts.freq, opts.start, opts.end)
         else:
-            out = TimeOpts(
+            out = PandasOpts(
                 opts["ts_column"],
                 opts.get("panel_column", None),
                 opts.get("freq", None),
@@ -72,55 +64,21 @@ class TimeOpts:
             )
             return (out.ts_column, out.panel_column, out.freq, out.start, out.end)
 
-
-def _maybe_pyspark(name: str):
-    def deco(cls: type):
-        try:
-            return pyspark_register_dataframe_accessor(name)(cls)
-        except Exception:
-            return cls
-    return deco
-        
-
-# _maybe_pyspark("ts")(TSAccessor)
-# _maybe_pyspark("ts") returns
-# def deco(cls):
-#   try:
-#     return pyspark_register_dataframe_accessor("ts")
-#   except Exception:
-#     return cls
-#
-# so deco(TSAccessor) either returns
-# pyspark_register_dataframe_accessor("ts")(TSAccessor)
-# or TSAccessor
-
-
-@_maybe_pyspark("ts")
 @pd.api.extensions.register_dataframe_accessor("ts")
 class TSAccessor:
-    def __init__(self, obj: pd.DataFrame | ps.DataFrame):
-        try:
-            import pyspark.pandas as ps
-            ps.set_option('compute.ops_on_diff_frames', True)
-            if isinstance(obj, ps.DataFrame):
-                self._engine = ps
-            else:
-                self._engine = pd
-        except ImportError:
-            self._engine = pd
-
+    def __init__(self, obj: pd.DataFrame):
         self._obj = obj
 
-    def __call__(self, opts: TimeOpts | dict) -> TSAccessor:
+    def __call__(self, opts: PandasOpts | dict) -> TSAccessor:
         self._opts = opts
         return self
 
     def tsset(
         self,
-        ts_args: TimeOpts | dict,
+        ts_args: PandasOpts | dict,
     ) -> TimeDict:
         data = self._obj.copy()
-        ts_column, panel_column, freq, start, end = TimeOpts._extract_opts(ts_args)
+        ts_column, panel_column, freq, start, end = PandasOpts._extract_opts(ts_args)
         out_dict = TimeDict()
         if isinstance(ts_column, (str, bytes)):
             ts_column_name = ts_column
@@ -163,24 +121,18 @@ class TSAccessor:
             end = ts_column.max()
 
         if is_date:
-            # we don't have a way of making the complete time series in Spark right now,
-            # so we're limited to Pandas-sized time series. That's probably fine though not ideal:
-            # we can still have a time series for every minute since 1950 without issue
             complete_time_series = pd.period_range(
                 start=start, end=end, freq=out_dict.freq
             ).to_timestamp()  # type: ignore
-            if self._engine != pd:
-                complete_time_series = self._engine.from_pandas(complete_time_series)
         else:
             # note that `end` should be inclusive whereas range is top-exclusive
-            complete_time_series = _range(self._engine)(
+            complete_time_series = np.arange(
                 start, end + freq, out_dict.freq
             )
-        if self._engine == pd:
-            if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
+        if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
                 complete_time_series
-            ):
-                raise Exception("Time series structure doesn't match frequency specified.")
+        ):
+            raise Exception("Time series structure doesn't match frequency specified.")
 
         if panel_column is not None:
             if isinstance(panel_column, (str, bytes)):
@@ -199,7 +151,6 @@ class TSAccessor:
         out_dict.is_date = is_date
         out_dict.panel_column_name = panel_column_name
         out_dict.data.sort_values(ts_column_name, inplace=True)
-        out_dict.engine = self._engine
         return out_dict
 
     def tsfill(
@@ -210,15 +161,14 @@ class TSAccessor:
         sentinel: str | None = None,
         keep_index: bool = False,
         avoid_float_casts: bool = True,
-        opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame | ps.DataFrame:
+        opts_replacement: PandasOpts | dict | None = None,
+    ) -> pd.DataFrame:
         """
         Fill in holes in time-series or panel data
 
         Args:
             fill_value: Value to fill in NAs passed to `pandas.DataFrame.reindex`
             method: Method of filling in NAs passed to `pandas.DataFrame.reindex`.
-                Not available on PySpark.
             sentinel: If not None, the name of a column indicating if a row was
                 present in the original data (True) or was filled in by `tsfill`
                 (False)
@@ -227,14 +177,14 @@ class TSAccessor:
             avoid_float_casts: Use Pandas nullable dtypes to avoid casting integer columns
                 to float when NAs are filled in. Has no effect for `pyspark.pandas` DataFrames.
             opts_replacement: Replace Arguments for the time-series structure of the data.
-                Defaults to the existing TimeOpts arguments from `ts()`
+                Defaults to the existing PandasOpts arguments from `ts()`
 
 
         Returns:
-            Pandas DataFrame or pandas-on-Spark DataFrame
+            Pandas DataFrame
 
         Examples:
-            >>> from tslib.pandas_api import TimeOpts
+            >>> from tslib.pandas_api import PandasOpts
             >>> import pandas as pd
             >>> cookies = pd.DataFrame(
             ...   {
@@ -256,7 +206,7 @@ class TSAccessor:
             2  2002  Oatmeal Raisin  15
             3  2003           Sugar  12
             4  2008             M&M  40
-            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
             >>> cookies_ts = cookies.ts(cookies_args)
             >>> cookies_full = cookies_ts.tsfill()
             >>> cookies_full
@@ -277,10 +227,8 @@ class TSAccessor:
             ts_args = opts_replacement
         else:
             ts_args = self._opts
-        is_panel = TimeOpts._extract_opt(ts_args, "panel_column") is not None
+        is_panel = PandasOpts._extract_opt(ts_args, "panel_column") is not None
         ts = self.tsset(ts_args=ts_args)
-        if method is not None and ts.engine != pd:
-            raise Exception("`method` argument not available for PySpark DataFrames")
         assert ts.data is not None
         out = ts.data.copy()
         if sentinel is not None:
@@ -288,7 +236,7 @@ class TSAccessor:
             out[sentinel] = True
         if keep_index:
             out["__index__"] = out.index
-        if avoid_float_casts and ts.engine == pd:
+        if avoid_float_casts:
             # prevent ints from being turned into floats because of NAs
             out = out.convert_dtypes(
                 convert_string=False, infer_objects=False, convert_floating=False  # type: ignore
@@ -297,15 +245,9 @@ class TSAccessor:
         if not is_panel:
             out.set_index(ts.ts_column_name,drop=True,inplace=True)
             out.index.name = None
-            if ts.engine == pd:
-                out = out.reindex(
-                    ts.complete_time_series, method=method, fill_value=fill_value
-                )
-            else:
-                ts.complete_time_series.name = None
-                out = out.reindex(
-                    ts.complete_time_series, fill_value=fill_value
-                )
+            out = out.reindex(
+                ts.complete_time_series, method=method, fill_value=fill_value
+            )
             out.index.name = "__temporary_index__"
             out.reset_index(drop=False,inplace=True) # this will create a column called "__temporary_index__"
             out.rename(columns={"__temporary_index__":ts.ts_column_name},inplace=True)
@@ -315,7 +257,7 @@ class TSAccessor:
             out.set_index(ts.ts_column_name,drop=False,inplace=True)
             out.index.name = None
             out_grouped = out.groupby(ts.panel_column_name)
-            new_groups: list[None | pd.DataFrame | ps.DataFrame] = [
+            new_groups: list[None | pd.DataFrame] = [
                 None for _ in range(len(out_grouped))
             ]
             for i, (key, _) in zip(range(len(out_grouped)), out_grouped.groups.items()):
@@ -331,7 +273,7 @@ class TSAccessor:
                     )
                 new_groups[i][ts.ts_column_name] = ts.complete_time_series
                 new_groups[i][ts.panel_column_name] = key
-            out = ts.engine.concat(new_groups, axis=0)  # type: ignore
+            out = pd.concat(new_groups, axis=0)  # type: ignore
         if sentinel is not None:
             out.fillna({sentinel:False},inplace=True)
         if keep_index:
@@ -347,8 +289,8 @@ class TSAccessor:
         column: str | pd.Series,
         back: int = 1,
         *,
-        opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame | ps.DataFrame:
+        opts_replacement: PandasOpts | dict | None = None,
+    ) -> pd.DataFrame:
         """
         Add a lag column to a Pandas DataFrame
 
@@ -357,13 +299,13 @@ class TSAccessor:
             column: Column to take the lag of
             back: How many records to go back. Negative values are "leads"
             opts_replacement: Replace Arguments for the time-series structure of the data.
-                Defaults to the existing TimeOpts arguments from `ts()`
+                Defaults to the existing PandasOpts arguments from `ts()`
 
         Returns:
             Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
-            >>> from tslib.pandas_api import TimeOpts
+            >>> from tslib.pandas_api import PandasOpts
             >>> import pandas as pd
             >>> cookies = pd.DataFrame(
             ...   {
@@ -385,7 +327,7 @@ class TSAccessor:
             2  2002  Oatmeal Raisin  15
             3  2003           Sugar  12
             4  2008             M&M  40
-            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
             >>> cookies_ts = cookies.ts(cookies_args)
             >>> cookies_lag = cookies_ts.with_lag("previous_favorite", column="favorite")
             >>> cookies_lag
@@ -421,21 +363,13 @@ class TSAccessor:
                 )
                 out[col_name] = out[column_string].shift(back)
                 out = out[out["__sentinel__"]]
-                if ts.engine == pd:
-                    out.drop(["__sentinel__"], inplace=True, axis=1)
-                else:
-                    out = out.drop(["__sentinel__"], axis=1)
+                out.drop(["__sentinel__"], inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                if ts.engine == pd:
-                    new = ts.engine.DataFrame(
+                new = pd.DataFrame(
                         {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
-                    )
-                else: # Why does pyspark.pandas require us to do this???
-                    new = ts.engine.DataFrame(index=ts.data.index)
-                    new[ts.ts_column_name] = lagged_col
-                    new[col_name] = ts.data[column_string]
+                )
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
         else:
             if ts.is_date:
@@ -452,19 +386,13 @@ class TSAccessor:
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                if ts.engine == pd:
-                    new = ts.engine.DataFrame(
+                new = pd.DataFrame(
                         {
                             ts.ts_column_name: lagged_col,
                             col_name: ts.data[column_string],
                             ts.panel_column_name: ts.data[ts.panel_column_name],
                         }
-                    )
-                else: 
-                    new = ts.engine.DataFrame(index=ts.data.index)
-                    new[ts.ts_column_name] = lagged_col
-                    new[col_name] = ts.data[column_string]
-                    new[ts.panel_column_name] = ts.data[ts.panel_column_name]
+                )
                 out = ts.data.merge(
                     new, on=[ts.ts_column_name, ts.panel_column_name], how="left"
                 )
@@ -475,10 +403,10 @@ class TSAccessor:
     def with_lead(
         self,
         col_name: str,
-        column: pd.Series | ps.Series | str,
+        column: pd.Series | str,
         forward: int | None = 1,
-        opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame | ps.DataFrame:
+        opts_replacement: PandasOpts | dict | None = None,
+    ) -> pd.DataFrame:
         """
         Add a lead column to a Pandas DataFrame
 
@@ -487,13 +415,13 @@ class TSAccessor:
             column: Column to take the lead of
             forward: How many records to go forward. Negative values are "lags"
             opts_replacement: Replace Arguments for the time-series structure of the data.
-                Defaults to the existing TimeOpts arguments from `ts()`
+                Defaults to the existing PandasOpts arguments from `ts()`
 
         Returns:
             Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
-            >>> from tslib.pandas_api import TimeOpts
+            >>> from tslib.pandas_api import PandasOpts
             >>> import pandas as pd
             >>> cookies = pd.DataFrame(
             ...   {
@@ -515,7 +443,7 @@ class TSAccessor:
             2  2002  Oatmeal Raisin  15
             3  2003           Sugar  12
             4  2008             M&M  40
-            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
             >>> cookies_ts = cookies.ts(cookies_args)
             >>> cookies_lead = cookies_ts.with_lead("next_favorite", column="favorite")
             >>> cookies_lead
@@ -540,8 +468,8 @@ class TSAccessor:
         column: str | pd.Series,
         back: int | None = 1,
         *,
-        opts_replacement: TimeOpts | dict | None = None,
-    ) -> pd.DataFrame | ps.DataFrame:
+        opts_replacement: PandasOpts | dict | None = None,
+    ) -> pd.DataFrame:
         """
         Add a difference column to a Pandas DataFrame
 
@@ -550,13 +478,13 @@ class TSAccessor:
             column: Column to take the difference of
             back: How many records to go back to compute difference.
             opts_replacement: Replace Arguments for the time-series structure of the data.
-                Defaults to the existing TimeOpts arguments from `ts()`
+                Defaults to the existing PandasOpts arguments from `ts()`
 
         Returns:
             Pandas DataFrame or pandas-on-Spark DataFrame
 
         Examples:
-            >>> from tslib.pandas_api import TimeOpts
+            >>> from tslib.pandas_api import PandasOpts
             >>> import pandas as pd
             >>> cookies = pd.DataFrame(
             ...   {
@@ -578,7 +506,7 @@ class TSAccessor:
             2  2002  Oatmeal Raisin  15
             3  2003           Sugar  12
             4  2008             M&M  40
-            >>> cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+            >>> cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
             >>> cookies_ts = cookies.ts(cookies_args)
             >>> cookies_diff = cookies_ts.with_difference("change_in_panelists", column="n")
             >>> cookies_diff
