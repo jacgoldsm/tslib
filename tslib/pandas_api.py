@@ -64,6 +64,7 @@ class PandasOpts:
             )
             return (out.ts_column, out.panel_column, out.freq, out.start, out.end)
 
+
 @pd.api.extensions.register_dataframe_accessor("ts")
 class TSAccessor:
     def __init__(self, obj: pd.DataFrame):
@@ -126,11 +127,9 @@ class TSAccessor:
             ).to_timestamp()  # type: ignore
         else:
             # note that `end` should be inclusive whereas range is top-exclusive
-            complete_time_series = np.arange(
-                start, end + freq, out_dict.freq
-            )
+            complete_time_series = np.arange(start, end + freq, out_dict.freq)
         if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
-                complete_time_series
+            complete_time_series
         ):
             raise Exception("Time series structure doesn't match frequency specified.")
 
@@ -243,18 +242,20 @@ class TSAccessor:
             )
 
         if not is_panel:
-            out.set_index(ts.ts_column_name,drop=True,inplace=True)
+            out.set_index(ts.ts_column_name, drop=True, inplace=True)
             out.index.name = None
             out = out.reindex(
                 ts.complete_time_series, method=method, fill_value=fill_value
             )
             out.index.name = "__temporary_index__"
-            out.reset_index(drop=False,inplace=True) # this will create a column called "__temporary_index__"
-            out.rename(columns={"__temporary_index__":ts.ts_column_name},inplace=True)
+            out.reset_index(
+                drop=False, inplace=True
+            )  # this will create a column called "__temporary_index__"
+            out.rename(columns={"__temporary_index__": ts.ts_column_name}, inplace=True)
             out.index.name = None
 
         else:
-            out.set_index(ts.ts_column_name,drop=False,inplace=True)
+            out.set_index(ts.ts_column_name, drop=False, inplace=True)
             out.index.name = None
             out_grouped = out.groupby(ts.panel_column_name)
             new_groups: list[None | pd.DataFrame] = [
@@ -264,23 +265,23 @@ class TSAccessor:
                 subset = out.loc[out[ts.panel_column_name] == key]
                 if ts.engine == pd:
                     new_groups[i] = subset.reindex(
-                    ts.complete_time_series, method=method, fill_value=fill_value
+                        ts.complete_time_series, method=method, fill_value=fill_value
                     )
                 else:
                     ts.complete_time_series.name = None
                     new_groups[i] = subset.reindex(
-                    ts.complete_time_series, fill_value=fill_value
+                        ts.complete_time_series, fill_value=fill_value
                     )
                 new_groups[i][ts.ts_column_name] = ts.complete_time_series
                 new_groups[i][ts.panel_column_name] = key
             out = pd.concat(new_groups, axis=0)  # type: ignore
         if sentinel is not None:
-            out.fillna({sentinel:False},inplace=True)
+            out.fillna({sentinel: False}, inplace=True)
         if keep_index:
-            out.set_index("__index__",drop=True,inplace=True)
+            out.set_index("__index__", drop=True, inplace=True)
             out.index.name = None
         else:
-            out.reset_index(drop=True,inplace=True)
+            out.reset_index(drop=True, inplace=True)
         return out
 
     def with_lag(
@@ -302,7 +303,7 @@ class TSAccessor:
                 Defaults to the existing PandasOpts arguments from `ts()`
 
         Returns:
-            Pandas DataFrame or pandas-on-Spark DataFrame
+            Pandas DataFrame
 
         Examples:
             >>> from tslib.pandas_api import PandasOpts
@@ -368,7 +369,7 @@ class TSAccessor:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
                 new = pd.DataFrame(
-                        {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
+                    {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
                 )
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
         else:
@@ -387,11 +388,11 @@ class TSAccessor:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
                 new = pd.DataFrame(
-                        {
-                            ts.ts_column_name: lagged_col,
-                            col_name: ts.data[column_string],
-                            ts.panel_column_name: ts.data[ts.panel_column_name],
-                        }
+                    {
+                        ts.ts_column_name: lagged_col,
+                        col_name: ts.data[column_string],
+                        ts.panel_column_name: ts.data[ts.panel_column_name],
+                    }
                 )
                 out = ts.data.merge(
                     new, on=[ts.ts_column_name, ts.panel_column_name], how="left"
@@ -528,4 +529,3 @@ class TSAccessor:
         out = self._obj.copy()
         out[col_name] = curr - lag
         return out
-

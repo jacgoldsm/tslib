@@ -18,6 +18,7 @@ from dataclasses import dataclass
 if TYPE_CHECKING:
     import numpy as np
 
+
 @dataclass
 class TimeDict:
     data: pd.DataFrame | None = None
