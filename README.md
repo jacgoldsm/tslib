@@ -252,3 +252,16 @@ python3 -m pip install pytest
 python3 -m pytest
 ```
 
+## Building the Docs
+
+To rebuild the docs, run the following
+
+```bash
+python3 -m pip install mkdocs mkdocstrings[python] mkdocs-material
+mkdocs build
+```
+
+See what it looks like on a local server with `mkdocs serve`.
+Once it looks right, deploy with `mkdocs gh-deploy`.
+
+Once it's deployed, delete the site/ repository so it doesn't pollute the main branch.

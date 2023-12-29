@@ -263,3 +263,5 @@ mkdocs build
 
 See what it looks like on a local server with `mkdocs serve`.
 Once it looks right, deploy with `mkdocs gh-deploy`.
+
+Once it's deployed, delete the site/ repository so it doesn't pollute the main branch.
