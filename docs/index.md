@@ -1,24 +1,18 @@
 # tslib
-A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and PySpark (via pandas-on-Spark).
+A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and PySpark.
 
-In Pandas, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
+In Pandas and PySpark, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
 
-All Pandas functionality works equally with [pandas-on-Spark](https://spark.apache.org/docs/latest/api/python/user_guide/pandas_on_spark/pandas_pyspark.html) DataFrames.
-
+See complete documentation [here](https://jacgoldsm.github.io/tslib/).
 
 ## Installation
 `tslib` is not currently on PyPI. Install from GitHub with:
 
 `pip install tslib@git+https://github.com/jacgoldsm/tslib`
 
-## Using with PySpark
-To use with the normal PySpark DataFrames, sandwich your `tslib` code as follows:
-
-```python
-my_pandas_on_spark = my_spark_df.pandas_api()
-# Use `tslib` Pandas APIs as normal here
-my_new_spark_df = my_pandas_on_spark.to_spark()
-```
+## Note
+`tslib` works with dates stored as numbers or as dates/timestamps, but it will almost always be more efficient
+with integer dates, especially with PySpark.
 
 ## Getting Started—Time-Series Data
 ```python
@@ -258,3 +252,14 @@ python3 -m pip install pytest
 python3 -m pytest
 ```
 
+## Building the Docs
+
+To rebuild the docs, run the following
+
+```bash
+python3 -m pip install mkdocs mkdocstrings[python] mkdocs-material
+mkdocs build
+```
+
+See what it looks like on a local server with `mkdocs serve`.
+Once it looks right, deploy with `mkdocs gh-deploy`.

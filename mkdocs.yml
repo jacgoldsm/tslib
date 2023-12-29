@@ -37,7 +37,7 @@ nav:
   - Home: index.md
   - API Reference:
       - Pandas: api/pandas.md
-      # - PySpark: api/pyspark.md  # will be added later
+      - PySpark: api/pyspark.md  # will be added later
   - Development Guide: devguide.md
   - Changelog: CHANGELOG.md
   - Authors: AUTHORS.md
