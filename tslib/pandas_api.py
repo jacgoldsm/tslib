@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import numpy as np
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import Any, Iterable
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -12,11 +12,7 @@ from tslib.pandas_utils import (
     _is_numeric,
     _is_numeric_scalar,
     TimeDict,
-    _range,
 )
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 @dataclass
@@ -27,20 +23,19 @@ class PandasOpts:
     start: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
     end: int | float | str | pd.Timestamp | datetime | np.datetime64 | None = None
 
-    def assign(self, inplace=False, **kwargs) -> PandasOpts | None:
+    def assign(self,inplace=False,**kwargs) -> PandasOpts | None:
         import copy
-
         if not inplace:
             out = copy.copy(self)
         else:
             out = None
         for kwarg in kwargs.keys():
-            if kwarg not in ("ts_column", "panel_column", "freq", "start", "end"):
+            if kwarg not in ('ts_column','panel_column','freq','start','end'):
                 raise ValueError(f"Invalid option: {kwarg}")
             if inplace:
-                setattr(self, kwarg, kwargs[kwarg])
+                setattr(self,kwarg,kwargs[kwarg])
             else:
-                setattr(out, kwarg, kwargs[kwarg])
+                setattr(out,kwarg,kwargs[kwarg])
         return out
 
     @staticmethod
@@ -99,7 +94,7 @@ class TSAccessor:
             raise Exception(
                 "For a numeric time-series variable" "Frequency must be a number."
             )
-        data.reset_index(drop=True)
+        data.index = np.arange(len(data.index))  # type: ignore
         is_date = _is_date(ts_column)
         if is_date:
             out_dict.freq = pd.tseries.frequencies.to_offset(freq)  # type: ignore
@@ -126,8 +121,10 @@ class TSAccessor:
                 start=start, end=end, freq=out_dict.freq
             ).to_timestamp()  # type: ignore
         else:
-            # note that `end` should be inclusive whereas range is top-exclusive
-            complete_time_series = np.arange(start, end + freq, out_dict.freq)
+            # note that `end` should be inclusive whereas np.arange is top-exclusive
+            complete_time_series = np.arange(
+                start=start, stop=end + freq, step=out_dict.freq
+            )
         if set(ts_column[(ts_column >= start) & (ts_column <= end)]) - set(
             complete_time_series
         ):
@@ -155,33 +152,30 @@ class TSAccessor:
     def tsfill(
         self,
         *,
-        fill_value: Any = None,
         method: str | None = None,
+        opts_replacement: PandasOpts | dict | None = None,
+        fill_value: Any = None,
         sentinel: str | None = None,
         keep_index: bool = False,
         avoid_float_casts: bool = True,
-        opts_replacement: PandasOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
         Fill in holes in time-series or panel data
 
         Args:
             fill_value: Value to fill in NAs passed to `pandas.DataFrame.reindex`
-            method: Method of filling in NAs passed to `pandas.DataFrame.reindex`.
             sentinel: If not None, the name of a column indicating if a row was
                 present in the original data (True) or was filled in by `tsfill`
                 (False)
             keep_index: If True, the index of the data returned will be the index of
                 the original data with null values for filled-in observations
             avoid_float_casts: Use Pandas nullable dtypes to avoid casting integer columns
-                to float when NAs are filled in. Has no effect for `pyspark.pandas` DataFrames.
-            opts_replacement: Replace Arguments for the time-series structure of the data.
-                Defaults to the existing PandasOpts arguments from `ts()`
+                to float when NAs are filled in.
 
-
+        
         Returns:
             Pandas DataFrame
-
+        
         Examples:
             >>> from tslib.pandas_api import PandasOpts
             >>> import pandas as pd
@@ -227,61 +221,54 @@ class TSAccessor:
         else:
             ts_args = self._opts
         is_panel = PandasOpts._extract_opt(ts_args, "panel_column") is not None
-        ts = self.tsset(ts_args=ts_args)
+        if not is_panel:
+            ts = self.tsset(ts_args=ts_args)
+        else:
+            ts = self.tsset(ts_args=ts_args)
         assert ts.data is not None
         out = ts.data.copy()
         if sentinel is not None:
             sentinel = str(sentinel)
             out[sentinel] = True
         if keep_index:
-            out["__index__"] = out.index
+            out['__index__'] = out.index
         if avoid_float_casts:
             # prevent ints from being turned into floats because of NAs
             out = out.convert_dtypes(
                 convert_string=False, infer_objects=False, convert_floating=False  # type: ignore
             )
 
+        assert ts.ts_column_name is not None
         if not is_panel:
-            out.set_index(ts.ts_column_name, drop=True, inplace=True)
-            out.index.name = None
+            assert isinstance(ts.complete_time_series, Iterable)
+            out.index = out[ts.ts_column_name]  # type: ignore
             out = out.reindex(
                 ts.complete_time_series, method=method, fill_value=fill_value
             )
-            out.index.name = "__temporary_index__"
-            out.reset_index(
-                drop=False, inplace=True
-            )  # this will create a column called "__temporary_index__"
-            out.rename(columns={"__temporary_index__": ts.ts_column_name}, inplace=True)
-            out.index.name = None
+            out[ts.ts_column_name] = ts.complete_time_series
 
         else:
-            out.set_index(ts.ts_column_name, drop=False, inplace=True)
-            out.index.name = None
+            assert ts.panel_column_name is not None
+            out.index = out[ts.ts_column_name]  # type: ignore
             out_grouped = out.groupby(ts.panel_column_name)
             new_groups: list[None | pd.DataFrame] = [
                 None for _ in range(len(out_grouped))
             ]
             for i, (key, _) in zip(range(len(out_grouped)), out_grouped.groups.items()):
                 subset = out.loc[out[ts.panel_column_name] == key]
-                if ts.engine == pd:
-                    new_groups[i] = subset.reindex(
-                        ts.complete_time_series, method=method, fill_value=fill_value
-                    )
-                else:
-                    ts.complete_time_series.name = None
-                    new_groups[i] = subset.reindex(
-                        ts.complete_time_series, fill_value=fill_value
-                    )
+                new_groups[i] = subset.reindex(
+                    ts.complete_time_series, method=method, fill_value=fill_value
+                )
                 new_groups[i][ts.ts_column_name] = ts.complete_time_series
                 new_groups[i][ts.panel_column_name] = key
             out = pd.concat(new_groups, axis=0)  # type: ignore
         if sentinel is not None:
-            out.fillna({sentinel: False}, inplace=True)
+            out[sentinel] = out[sentinel].fillna(False)
         if keep_index:
-            out.set_index("__index__", drop=True, inplace=True)
-            out.index.name = None
+            out.index = np.array(out['__index__'])
+            out.drop("__index__",inplace=True,axis=1)
         else:
-            out.reset_index(drop=True, inplace=True)
+            out.index = np.arange(len(out.index))
         return out
 
     def with_lag(
@@ -347,7 +334,7 @@ class TSAccessor:
         ts = self.tsset(ts_args=ts_args)
         assert ts.data is not None
         assert ts.freq is not None
-        if isinstance(column, str):
+        if isinstance(column,str):
             column_string: str = column
             column = ts.data[column]
         else:
@@ -359,44 +346,26 @@ class TSAccessor:
                 # if the column is a date, so we have to use the "complete" time series.
                 # Thus, tsfill the data and then use the "shift"-based lag method.
                 # Then filter to the original series.
-                out = ts.data.ts(ts_args).tsfill(
-                    sentinel="__sentinel__", keep_index=True
-                )
+                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
                 out[col_name] = out[column_string].shift(back)
                 out = out[out["__sentinel__"]]
                 out.drop(["__sentinel__"], inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame(
-                    {ts.ts_column_name: lagged_col, col_name: ts.data[column_string]}
-                )
+                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string]})
                 out = ts.data.merge(new, on=ts.ts_column_name, how="left")
         else:
             if ts.is_date:
-                out = ts.data.ts(ts_args).tsfill(
-                    sentinel="__sentinel__", keep_index=True
-                )
-                out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(
-                    back
-                )
-                if ts.engine == pd:
-                    out.drop(["__sentinel__"], inplace=True, axis=1)
-                else:
-                    out = out.drop(["__sentinel__"], axis=1)
+                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
+                out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(back)
+                out = out[out["__sentinel__"]]
+                out.drop(["__sentinel__"], inplace=True, axis=1)
             else:
                 assert ts.ts_column_name is not None
                 lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame(
-                    {
-                        ts.ts_column_name: lagged_col,
-                        col_name: ts.data[column_string],
-                        ts.panel_column_name: ts.data[ts.panel_column_name],
-                    }
-                )
-                out = ts.data.merge(
-                    new, on=[ts.ts_column_name, ts.panel_column_name], how="left"
-                )
+                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string], ts.panel_column_name:ts.data[ts.panel_column_name]})
+                out = ts.data.merge(new, on=[ts.ts_column_name,ts.panel_column_name], how="left")
 
         out.sort_index(inplace=True)
         return out
@@ -405,7 +374,7 @@ class TSAccessor:
         self,
         col_name: str,
         column: pd.Series | str,
-        forward: int | None = 1,
+        forward: int | None =1,
         opts_replacement: PandasOpts | dict | None = None,
     ) -> pd.DataFrame:
         """
@@ -419,7 +388,7 @@ class TSAccessor:
                 Defaults to the existing PandasOpts arguments from `ts()`
 
         Returns:
-            Pandas DataFrame or pandas-on-Spark DataFrame
+            Pandas DataFrame
 
         Examples:
             >>> from tslib.pandas_api import PandasOpts
@@ -459,15 +428,13 @@ class TSAccessor:
             ts_args = opts_replacement
         else:
             ts_args = self._opts
-        return self.with_lag(
-            col_name, column, back=-1 * forward, opts_replacement=ts_args
-        )
+        return self.with_lag(col_name, column, back=-1 * forward, opts_replacement=ts_args)
 
     def with_difference(
         self,
         col_name: str,
         column: str | pd.Series,
-        back: int | None = 1,
+        back: int | None =1,
         *,
         opts_replacement: PandasOpts | dict | None = None,
     ) -> pd.DataFrame:
@@ -482,7 +449,7 @@ class TSAccessor:
                 Defaults to the existing PandasOpts arguments from `ts()`
 
         Returns:
-            Pandas DataFrame or pandas-on-Spark DataFrame
+            Pandas DataFrame
 
         Examples:
             >>> from tslib.pandas_api import PandasOpts

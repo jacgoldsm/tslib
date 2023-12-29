@@ -3,6 +3,7 @@ from __future__ import annotations
 import pyspark
 import re
 from numbers import Number
+import pandas as pd
 
 
 def _is_numeric(df: pyspark.sql.dataframe.DataFrame, col: str):

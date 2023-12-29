@@ -1,9 +1,7 @@
 # tslib
-A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and PySpark (via pandas-on-Spark).
+A correct and consistent API for dealing with leads, lags, differences, and filling in gaps in time-series and panel data. Available in Pandas and PySpark.
 
-In Pandas, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
-
-All Pandas functionality works equally with [pandas-on-Spark](https://spark.apache.org/docs/latest/api/python/user_guide/pandas_on_spark/pandas_pyspark.html) DataFrames.
+In Pandas and PySpark, importing `tslib` grants access to the `.ts` accessor, allowing for idiomatic creation of lags, leads, and differences with time series and panel data. 
 
 See complete documentation [here](https://jacgoldsm.github.io/tslib/).
 
@@ -12,19 +10,14 @@ See complete documentation [here](https://jacgoldsm.github.io/tslib/).
 
 `pip install tslib@git+https://github.com/jacgoldsm/tslib`
 
-## Using with PySpark
-To use with the normal PySpark DataFrames, sandwich your `tslib` code as follows:
-
-```python
-my_pandas_on_spark = my_spark_df.pandas_api()
-# Use `tslib` Pandas APIs as normal here
-my_new_spark_df = my_pandas_on_spark.to_spark()
-```
+## Note
+`tslib` works with dates stored as numbers or as dates/timestamps, but it will almost always be more efficient
+with integer dates, especially with PySpark.
 
 ## Getting Started—Time-Series Data
 ```python
 import pandas as pd
-from tslib.pandas_api import TimeOpts
+from tslib.pandas_api import PandasOpts
 
 # Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.
 cookies = pd.DataFrame(
@@ -49,7 +42,7 @@ print(cookies)
 4  2008             M&M  40
 # Define our time series arguments. 
 # Set the time-series column, frequency, and start of the time-series.
-cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
 # define our time-series DataFrame
 cookies_ts = cookies.ts(cookies_args)
 # create a DataFrame with all the gaps in the time-series filled in
@@ -96,7 +89,7 @@ print(cookies_ts.with_difference("change_in_panelists",column="n"))
 ## Getting Started: Panel Data
 ```python
 import pandas as pd
-from tslib.pandas_api import TimeOpts
+from tslib.pandas_api import PandasOpts
 
 # Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.
 dates = [
@@ -153,7 +146,7 @@ print(panel)
 11   2 2000-09-01   f           800
 12   3 2000-09-01   f           630
 # define our Time-Series options
-panel_args = TimeOpts(
+panel_args = PandasOpts(
     ts_column="date",
     panel_column=panel["id"],
     start="1999-12-01",
