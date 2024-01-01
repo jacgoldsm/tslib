@@ -10,10 +10,6 @@ See complete documentation [here](https://jacgoldsm.github.io/tslib/).
 
 `pip install tslib@git+https://github.com/jacgoldsm/tslib`
 
-## Note
-`tslib` works with dates stored as numbers or as dates/timestamps, but it will almost always be more efficient
-with integer dates, especially with PySpark.
-
 ## Getting Started—Time-Series Data
 ```python
 import pandas as pd

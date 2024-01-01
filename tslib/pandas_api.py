@@ -11,6 +11,7 @@ from tslib.pandas_utils import (
     _is_date,
     _is_numeric,
     _is_numeric_scalar,
+    offsets_since_epoch,
     TimeDict,
 )
 
@@ -98,10 +99,7 @@ class TSAccessor:
         is_date = _is_date(ts_column)
         if is_date:
             out_dict.freq = pd.tseries.frequencies.to_offset(freq)  # type: ignore
-            assert not isinstance(start, (int, float))
-            assert not isinstance(end, (int, float))
         else:
-            assert isinstance(freq, (int, float))
             out_dict.freq = freq
 
         if start is not None:
@@ -140,6 +138,11 @@ class TSAccessor:
                 )
         else:
             panel_column_name = None
+
+        if is_date:
+            numeric_series = offsets_since_epoch(ts_column, freq)
+            data['__offsets_since_epoch__'] = numeric_series
+
 
         out_dict.complete_time_series = complete_time_series
         out_dict.data = data
@@ -269,7 +272,10 @@ class TSAccessor:
             out.drop("__index__",inplace=True,axis=1)
         else:
             out.index = np.arange(len(out.index))
-        return out
+        if ts.is_date:
+            return out.drop("__offsets_since_epoch__",axis=1)
+        else:
+            return out
 
     def with_lag(
         self,
@@ -340,35 +346,24 @@ class TSAccessor:
         else:
             column_string: str = column.name
 
+        time_col = ts.ts_column_name if not ts.is_date else "__offsets_since_epoch__"
+        freq = ts.freq if not ts.is_date else ts.freq.n
         if ts.panel_column_name is None:
-            if ts.is_date:
-                # pessimisation: we can't reliably predict the next element of the series
-                # if the column is a date, so we have to use the "complete" time series.
-                # Thus, tsfill the data and then use the "shift"-based lag method.
-                # Then filter to the original series.
-                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
-                out[col_name] = out[column_string].shift(back)
-                out = out[out["__sentinel__"]]
-                out.drop(["__sentinel__"], inplace=True, axis=1)
-            else:
-                assert ts.ts_column_name is not None
-                lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string]})
-                out = ts.data.merge(new, on=ts.ts_column_name, how="left")
+            assert ts.ts_column_name is not None
+            lagged_col = ts.data[time_col] + (freq * back)  # type: ignore
+            new = pd.DataFrame({time_col: lagged_col, col_name: ts.data[column_string]})
+            out = ts.data.merge(new, on=time_col, how="left")
         else:
-            if ts.is_date:
-                out = ts.data.ts(ts_args).tsfill(sentinel="__sentinel__",keep_index=True)
-                out[col_name] = out.groupby(ts.panel_column_name)[column_string].shift(back)
-                out = out[out["__sentinel__"]]
-                out.drop(["__sentinel__"], inplace=True, axis=1)
-            else:
-                assert ts.ts_column_name is not None
-                lagged_col = ts.data[ts.ts_column_name] + (ts.freq * back)  # type: ignore
-                new = pd.DataFrame({ts.ts_column_name: lagged_col, col_name: ts.data[column_string], ts.panel_column_name:ts.data[ts.panel_column_name]})
-                out = ts.data.merge(new, on=[ts.ts_column_name,ts.panel_column_name], how="left")
+            assert ts.ts_column_name is not None
+            lagged_col = ts.data[time_col] + (freq * back)  # type: ignore
+            new = pd.DataFrame({time_col: lagged_col, col_name: ts.data[column_string], ts.panel_column_name:ts.data[ts.panel_column_name]})
+            out = ts.data.merge(new, on=[time_col,ts.panel_column_name], how="left")
 
         out.sort_index(inplace=True)
-        return out
+        if ts.is_date:
+            return out.drop("__offsets_since_epoch__",axis=1)
+        else:
+            return out
 
     def with_lead(
         self,
@@ -495,4 +490,7 @@ class TSAccessor:
         curr = self._obj[column]
         out = self._obj.copy()
         out[col_name] = curr - lag
-        return out
+        if hasattr(out, "__offsets_since_epoch__"):
+            return out.drop("__offsets_since_epoch__",axis=1)
+        else:
+            return out

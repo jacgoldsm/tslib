@@ -12,6 +12,7 @@ from tslib.pyspark_utils import (
     _is_numeric,
     _is_date,
     _is_numeric_scalar,
+    offsets_since_epoch,
 )
 import pyspark
 import pyspark.sql.functions as F
@@ -68,7 +69,7 @@ class TSAccessor:
             if is_date:
                 start = pd.to_datetime(start)
         else:
-            start = self._obj.agg(F.max(ts_column).alias("__min__")).toPandas()[
+            start = self._obj.agg(F.min(ts_column).alias("__min__")).toPandas()[
                 "__min__"
             ][0]
 
@@ -87,9 +88,14 @@ class TSAccessor:
         else:
             # note that `end` should be inclusive whereas range is top-exclusive
             complete_time_series = np.arange(start, end + freq, out_dict.freq)
+
+        data = self._obj
+        if is_date:
+            data = data.withColumn('__offsets_since_epoch__', offsets_since_epoch(freq)(ts_column))
+
         is_date = _is_date(self._obj, ts_column)
         out_dict.complete_time_series = complete_time_series
-        out_dict.data = self._obj
+        out_dict.data = data
         out_dict.start, out_dict.end = start, end
         out_dict.is_date = is_date
         out_dict.panel_column_name = panel_column
@@ -188,12 +194,13 @@ class TSAccessor:
         if sentinel is not None:
             out = out.withColumn(sentinel, F.coalesce(F.col(sentinel), F.lit(False)))
             if fill_value is not None:
-                # we can't use fillna here since it doesn't admit a predicate
+                # we can't use fillna here since it doesn't admit a predicate.
+                # instead, use `sentinel` as predicate and fill in only rows for which sentinel=TRUE.
                 xt_cols = [ts.ts_column_name,ts.panel_column_name] if is_panel else [ts.ts_column_name]
                 other_cols = [col for col in out.columns if col not in xt_cols]
                 exprs = [F.expr(f"CASE WHEN {sentinel} THEN {fill_value} ELSE {col} END") for col in other_cols]
                 out = out.select(xt_cols, exprs)
-        return out.drop("__sentinel_dropped__")
+        return out.drop("__sentinel_dropped__", "__offsets_since_epoch__")
 
     def with_lag(
         self,
@@ -270,40 +277,33 @@ class TSAccessor:
             order_column = ts.ts_column_name
             offset = ts.freq
             range_spec = (-1 * back * offset, -1 * back * offset)
-            if not is_panel:
-                return dta.withColumn(
+        else:
+            # in this case, we order by the numeric value of ts.ts_column
+            # and use ts.freq.n as the rangeSpec
+            dta = ts.data
+            order_column = "__offsets_since_epoch__"
+            offset = ts.freq.n
+            range_spec = (-1 * back * offset, -1 * back * offset)
+
+        if not is_panel:
+            return dta.withColumn(
                     col_name,
                     F.max(column).over(
                         Window.orderBy(order_column).rangeBetween(
                             *range_spec
                         )
                     ),
-                )
-            else:
-                return dta.withColumn(
+            ).drop("__offsets_since_epoch__")
+        else:
+            return dta.withColumn(
                     col_name,
                     F.max(column).over(
                         Window.partitionBy(ts.panel_column_name)
                         .orderBy(order_column)
                         .rangeBetween(*range_spec)
                     ),
-                )
-        else:
-            # as far as I'm aware, there's really no way to do this accurately
-            # with dates in pyspark. Create a full panel and then filter.
-            if not is_panel:
-                out = ts.data.ts(ts_args).tsfill(
-                        sentinel="__sentinel__"
-                )
-                out = out.withColumn(col_name, F.lag(column, back).over(Window.orderBy(ts.ts_column_name)))
-            else:
-                out = ts.data.ts(ts_args).tsfill(
-                    sentinel="__sentinel__"
-                )
-                out = out.withColumn(col_name, F.lag(column, back).over(Window.partitionBy(ts.panel_column_name).orderBy(ts.ts_column_name)))
-            out = out.filter("__sentinel__")
-            out = out.drop("__sentinel__")
-            return out
+            ).drop("__offsets_since_epoch__")
+    
             
     def with_lead(
             self,
@@ -370,7 +370,7 @@ class TSAccessor:
                 ts_args = self._opts
             return self.with_lag(
                 col_name, column, back=-1 * forward, opts_replacement=ts_args
-            )
+            ).drop("__offsets_since_epoch__")
 
     def with_difference(
         self,
@@ -440,7 +440,7 @@ class TSAccessor:
             "__difference_dummy__", column, back, opts_replacement=ts_args
         )
         out = lag.withColumn(col_name, F.col(column) - F.col("__difference_dummy__")).drop("__difference_dummy__")
-        return out
+        return out.drop("__offsets_since_epoch__")
 
 
 

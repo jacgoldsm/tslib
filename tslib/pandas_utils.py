@@ -57,3 +57,13 @@ def _is_acceptable_type(ser: pd.Series) -> bool:
 
 def _is_numeric_scalar(val: Any) -> bool:
     return isinstance(val, Number) or (is_scalar(val) and is_numeric_dtype(val))
+
+def offsets_since_epoch(s: pd.Series, o: pd.DateOffset) -> np.ndarray:
+    """Converts a date column to an integer column based on the interval of the data.
+    For example, if the data are monthly, the output should be months since the epoch,
+    if the data are minutely then it should be the minutes since epoch, etc."""
+    if isinstance(o,str):
+        o = pd.tseries.frequencies.to_offset(o)
+    idx = pd.Index(s)
+    int_idx = idx.to_period(o).astype(int) // o.n
+    return np.array(int_idx)

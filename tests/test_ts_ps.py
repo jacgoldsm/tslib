@@ -141,7 +141,6 @@ def compares_equal(
     except AssertionError:
         return False
 
-
 def test_cookies():
     assert compares_equal(cookies_date_full, expected_filled_date)
     assert compares_equal(cookies_date_with_lag, expected_lag_date)
