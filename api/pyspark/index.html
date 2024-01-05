@@ -623,8 +623,7 @@
 
             <details class="quote">
               <summary>Source code in <code>tslib/pyspark_api.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 41</span>
-<span class="normal"> 42</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 42</span>
 <span class="normal"> 43</span>
 <span class="normal"> 44</span>
 <span class="normal"> 45</span>
@@ -1055,7 +1054,7 @@
             <span class="k">if</span> <span class="n">is_date</span><span class="p">:</span>
                 <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">start</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">ts_column</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">&quot;__min__&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">toPandas</span><span class="p">()[</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">ts_column</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">&quot;__min__&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">toPandas</span><span class="p">()[</span>
                 <span class="s2">&quot;__min__&quot;</span>
             <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
 
@@ -1074,9 +1073,14 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># note that `end` should be inclusive whereas range is top-exclusive</span>
             <span class="n">complete_time_series</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">+</span> <span class="n">freq</span><span class="p">,</span> <span class="n">out_dict</span><span class="o">.</span><span class="n">freq</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span>
+        <span class="k">if</span> <span class="n">is_date</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="s1">&#39;__offsets_since_epoch__&#39;</span><span class="p">,</span> <span class="n">offsets_since_epoch</span><span class="p">(</span><span class="n">freq</span><span class="p">)(</span><span class="n">ts_column</span><span class="p">))</span>
+
         <span class="n">is_date</span> <span class="o">=</span> <span class="n">_is_date</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">,</span> <span class="n">ts_column</span><span class="p">)</span>
         <span class="n">out_dict</span><span class="o">.</span><span class="n">complete_time_series</span> <span class="o">=</span> <span class="n">complete_time_series</span>
-        <span class="n">out_dict</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span>
+        <span class="n">out_dict</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="n">out_dict</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">out_dict</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span>
         <span class="n">out_dict</span><span class="o">.</span><span class="n">is_date</span> <span class="o">=</span> <span class="n">is_date</span>
         <span class="n">out_dict</span><span class="o">.</span><span class="n">panel_column_name</span> <span class="o">=</span> <span class="n">panel_column</span>
@@ -1175,12 +1179,13 @@
         <span class="k">if</span> <span class="n">sentinel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">sentinel</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">coalesce</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">sentinel</span><span class="p">),</span> <span class="n">F</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="kc">False</span><span class="p">)))</span>
             <span class="k">if</span> <span class="n">fill_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># we can&#39;t use fillna here since it doesn&#39;t admit a predicate</span>
+                <span class="c1"># we can&#39;t use fillna here since it doesn&#39;t admit a predicate.</span>
+                <span class="c1"># instead, use `sentinel` as predicate and fill in only rows for which sentinel=TRUE.</span>
                 <span class="n">xt_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">,</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">]</span> <span class="k">if</span> <span class="n">is_panel</span> <span class="k">else</span> <span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">]</span>
                 <span class="n">other_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">xt_cols</span><span class="p">]</span>
                 <span class="n">exprs</span> <span class="o">=</span> <span class="p">[</span><span class="n">F</span><span class="o">.</span><span class="n">expr</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CASE WHEN </span><span class="si">{</span><span class="n">sentinel</span><span class="si">}</span><span class="s2"> THEN </span><span class="si">{</span><span class="n">fill_value</span><span class="si">}</span><span class="s2"> ELSE </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> END&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">other_cols</span><span class="p">]</span>
                 <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">xt_cols</span><span class="p">,</span> <span class="n">exprs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__sentinel_dropped__&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__sentinel_dropped__&quot;</span><span class="p">,</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">with_lag</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1257,40 +1262,33 @@
             <span class="n">order_column</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span>
             <span class="n">offset</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span>
             <span class="n">range_spec</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_panel</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># in this case, we order by the numeric value of ts.ts_column</span>
+            <span class="c1"># and use ts.freq.n as the rangeSpec</span>
+            <span class="n">dta</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">order_column</span> <span class="o">=</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span><span class="o">.</span><span class="n">n</span>
+            <span class="n">range_spec</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_panel</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
                     <span class="n">col_name</span><span class="p">,</span>
                     <span class="n">F</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">column</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span>
                         <span class="n">Window</span><span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">order_column</span><span class="p">)</span><span class="o">.</span><span class="n">rangeBetween</span><span class="p">(</span>
                             <span class="o">*</span><span class="n">range_spec</span>
                         <span class="p">)</span>
                     <span class="p">),</span>
-                <span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
                     <span class="n">col_name</span><span class="p">,</span>
                     <span class="n">F</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">column</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span>
                         <span class="n">Window</span><span class="o">.</span><span class="n">partitionBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">)</span>
                         <span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">order_column</span><span class="p">)</span>
                         <span class="o">.</span><span class="n">rangeBetween</span><span class="p">(</span><span class="o">*</span><span class="n">range_spec</span><span class="p">)</span>
                     <span class="p">),</span>
-                <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># as far as I&#39;m aware, there&#39;s really no way to do this accurately</span>
-            <span class="c1"># with dates in pyspark. Create a full panel and then filter.</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_panel</span><span class="p">:</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span>
-                        <span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span>
-                <span class="p">)</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">lag</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span><span class="n">Window</span><span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">)))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span>
-                    <span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span>
-                <span class="p">)</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">lag</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span><span class="n">Window</span><span class="o">.</span><span class="n">partitionBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">)</span><span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">)))</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">out</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
+
 
     <span class="k">def</span> <span class="nf">with_lead</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
@@ -1357,7 +1355,7 @@
                 <span class="n">ts_args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opts</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_lag</span><span class="p">(</span>
                 <span class="n">col_name</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="o">=-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">forward</span><span class="p">,</span> <span class="n">opts_replacement</span><span class="o">=</span><span class="n">ts_args</span>
-            <span class="p">)</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">with_difference</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1427,7 +1425,7 @@
             <span class="s2">&quot;__difference_dummy__&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="p">,</span> <span class="n">opts_replacement</span><span class="o">=</span><span class="n">ts_args</span>
         <span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">lag</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="o">-</span> <span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;__difference_dummy__&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__difference_dummy__&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">out</span>
+        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
 
@@ -1594,13 +1592,7 @@ Defaults to the existing TimeOpts arguments from <code>ts()</code></p>
 
           <details class="quote">
             <summary>Source code in <code>tslib/pyspark_api.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
 <span class="normal">108</span>
@@ -1691,7 +1683,14 @@ Defaults to the existing TimeOpts arguments from <code>ts()</code></p>
 <span class="normal">193</span>
 <span class="normal">194</span>
 <span class="normal">195</span>
-<span class="normal">196</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tsfill</span><span class="p">(</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tsfill</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">fill_value</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1783,12 +1782,13 @@ Defaults to the existing TimeOpts arguments from <code>ts()</code></p>
     <span class="k">if</span> <span class="n">sentinel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">sentinel</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">coalesce</span><span class="p">(</span><span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">sentinel</span><span class="p">),</span> <span class="n">F</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="kc">False</span><span class="p">)))</span>
         <span class="k">if</span> <span class="n">fill_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="c1"># we can&#39;t use fillna here since it doesn&#39;t admit a predicate</span>
+            <span class="c1"># we can&#39;t use fillna here since it doesn&#39;t admit a predicate.</span>
+            <span class="c1"># instead, use `sentinel` as predicate and fill in only rows for which sentinel=TRUE.</span>
             <span class="n">xt_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">,</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">]</span> <span class="k">if</span> <span class="n">is_panel</span> <span class="k">else</span> <span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">]</span>
             <span class="n">other_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">xt_cols</span><span class="p">]</span>
             <span class="n">exprs</span> <span class="o">=</span> <span class="p">[</span><span class="n">F</span><span class="o">.</span><span class="n">expr</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CASE WHEN </span><span class="si">{</span><span class="n">sentinel</span><span class="si">}</span><span class="s2"> THEN </span><span class="si">{</span><span class="n">fill_value</span><span class="si">}</span><span class="s2"> ELSE </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> END&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">other_cols</span><span class="p">]</span>
             <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">xt_cols</span><span class="p">,</span> <span class="n">exprs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__sentinel_dropped__&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__sentinel_dropped__&quot;</span><span class="p">,</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2089,7 +2089,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
         <span class="s2">&quot;__difference_dummy__&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="p">,</span> <span class="n">opts_replacement</span><span class="o">=</span><span class="n">ts_args</span>
     <span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">lag</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="o">-</span> <span class="n">F</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;__difference_dummy__&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__difference_dummy__&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">out</span>
+    <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2254,14 +2254,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 
           <details class="quote">
             <summary>Source code in <code>tslib/pyspark_api.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">205</span>
 <span class="normal">206</span>
 <span class="normal">207</span>
 <span class="normal">208</span>
@@ -2361,8 +2354,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 <span class="normal">302</span>
 <span class="normal">303</span>
 <span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_lag</span><span class="p">(</span>
+<span class="normal">305</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_lag</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">col_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2437,40 +2429,32 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
         <span class="n">order_column</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span>
         <span class="n">offset</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span>
         <span class="n">range_spec</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_panel</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># in this case, we order by the numeric value of ts.ts_column</span>
+        <span class="c1"># and use ts.freq.n as the rangeSpec</span>
+        <span class="n">dta</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">order_column</span> <span class="o">=</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">range_spec</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">back</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_panel</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
                 <span class="n">col_name</span><span class="p">,</span>
                 <span class="n">F</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">column</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span>
                     <span class="n">Window</span><span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">order_column</span><span class="p">)</span><span class="o">.</span><span class="n">rangeBetween</span><span class="p">(</span>
                         <span class="o">*</span><span class="n">range_spec</span>
                     <span class="p">)</span>
                 <span class="p">),</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dta</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span>
                 <span class="n">col_name</span><span class="p">,</span>
                 <span class="n">F</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">column</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span>
                     <span class="n">Window</span><span class="o">.</span><span class="n">partitionBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">)</span>
                     <span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">order_column</span><span class="p">)</span>
                     <span class="o">.</span><span class="n">rangeBetween</span><span class="p">(</span><span class="o">*</span><span class="n">range_spec</span><span class="p">)</span>
                 <span class="p">),</span>
-            <span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># as far as I&#39;m aware, there&#39;s really no way to do this accurately</span>
-        <span class="c1"># with dates in pyspark. Create a full panel and then filter.</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_panel</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span>
-                    <span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span>
-            <span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">lag</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span><span class="n">Window</span><span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">)))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span>
-                <span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span>
-            <span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">lag</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="p">)</span><span class="o">.</span><span class="n">over</span><span class="p">(</span><span class="n">Window</span><span class="o">.</span><span class="n">partitionBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">)</span><span class="o">.</span><span class="n">orderBy</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">)))</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">)</span>
-        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">out</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2765,7 +2749,7 @@ Defaults to the existing SparkOpts arguments from <code>ts()</code></p>
             <span class="n">ts_args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_opts</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">with_lag</span><span class="p">(</span>
             <span class="n">col_name</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">back</span><span class="o">=-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">forward</span><span class="p">,</span> <span class="n">opts_replacement</span><span class="o">=</span><span class="n">ts_args</span>
-        <span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>

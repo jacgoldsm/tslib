@@ -623,8 +623,7 @@
 
             <details class="quote">
               <summary>Source code in <code>tslib/pandas_api.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 63</span>
-<span class="normal"> 64</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 64</span>
 <span class="normal"> 65</span>
 <span class="normal"> 66</span>
 <span class="normal"> 67</span>
@@ -1056,9 +1055,7 @@
 <span class="normal">493</span>
 <span class="normal">494</span>
 <span class="normal">495</span>
-<span class="normal">496</span>
-<span class="normal">497</span>
-<span class="normal">498</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">register_dataframe_accessor</span><span class="p">(</span><span class="s2">&quot;ts&quot;</span><span class="p">)</span>
+<span class="normal">496</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">register_dataframe_accessor</span><span class="p">(</span><span class="s2">&quot;ts&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">TSAccessor</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span> <span class="o">=</span> <span class="n">obj</span>
@@ -1096,10 +1093,7 @@
         <span class="n">is_date</span> <span class="o">=</span> <span class="n">_is_date</span><span class="p">(</span><span class="n">ts_column</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">is_date</span><span class="p">:</span>
             <span class="n">out_dict</span><span class="o">.</span><span class="n">freq</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">tseries</span><span class="o">.</span><span class="n">frequencies</span><span class="o">.</span><span class="n">to_offset</span><span class="p">(</span><span class="n">freq</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-            <span class="k">assert</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
-            <span class="k">assert</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">end</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
             <span class="n">out_dict</span><span class="o">.</span><span class="n">freq</span> <span class="o">=</span> <span class="n">freq</span>
 
         <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1138,6 +1132,11 @@
                 <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">panel_column_name</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">is_date</span><span class="p">:</span>
+            <span class="n">numeric_series</span> <span class="o">=</span> <span class="n">offsets_since_epoch</span><span class="p">(</span><span class="n">ts_column</span><span class="p">,</span> <span class="n">freq</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;__offsets_since_epoch__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numeric_series</span>
+
 
         <span class="n">out_dict</span><span class="o">.</span><span class="n">complete_time_series</span> <span class="o">=</span> <span class="n">complete_time_series</span>
         <span class="n">out_dict</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
@@ -1267,7 +1266,10 @@
             <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__index__&quot;</span><span class="p">,</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">out</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">out</span>
+        <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span>
 
     <span class="k">def</span> <span class="nf">with_lag</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1338,35 +1340,24 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">column_string</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">name</span>
 
+        <span class="n">time_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span> <span class="k">else</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span>
+        <span class="n">freq</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span> <span class="k">else</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span><span class="o">.</span><span class="n">n</span>
         <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
-                <span class="c1"># pessimisation: we can&#39;t reliably predict the next element of the series</span>
-                <span class="c1"># if the column is a date, so we have to use the &quot;complete&quot; time series.</span>
-                <span class="c1"># Thus, tsfill the data and then use the &quot;shift&quot;-based lag method.</span>
-                <span class="c1"># Then filter to the original series.</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span><span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">,</span><span class="n">keep_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="n">out</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">column_string</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">back</span><span class="p">)</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">]]</span>
-                <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-                <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">]})</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">time_col</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">time_col</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">]})</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">time_col</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span><span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">,</span><span class="n">keep_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-                <span class="n">out</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">)[</span><span class="n">column_string</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">back</span><span class="p">)</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">]]</span>
-                <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-                <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">],</span> <span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">:</span><span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">]})</span>
-                <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">,</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">time_col</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">time_col</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">],</span> <span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">:</span><span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">]})</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">time_col</span><span class="p">,</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
 
         <span class="n">out</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">out</span>
+        <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span>
 
     <span class="k">def</span> <span class="nf">with_lead</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -1493,7 +1484,10 @@
         <span class="n">curr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">out</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">-</span> <span class="n">lag</span>
-        <span class="k">return</span> <span class="n">out</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">out</span>
 </code></pre></div></td></tr></table></div>
             </details>
 
@@ -1669,10 +1663,7 @@ to float when NAs are filled in.</p>
 
           <details class="quote">
             <summary>Source code in <code>tslib/pandas_api.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">155</span>
 <span class="normal">156</span>
 <span class="normal">157</span>
 <span class="normal">158</span>
@@ -1789,7 +1780,13 @@ to float when NAs are filled in.</p>
 <span class="normal">269</span>
 <span class="normal">270</span>
 <span class="normal">271</span>
-<span class="normal">272</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tsfill</span><span class="p">(</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">tsfill</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1909,7 +1906,10 @@ to float when NAs are filled in.</p>
         <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__index__&quot;</span><span class="p">,</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">out</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2068,7 +2068,12 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 
           <details class="quote">
             <summary>Source code in <code>tslib/pandas_api.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">433</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
 <span class="normal">434</span>
 <span class="normal">435</span>
 <span class="normal">436</span>
@@ -2131,9 +2136,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 <span class="normal">493</span>
 <span class="normal">494</span>
 <span class="normal">495</span>
-<span class="normal">496</span>
-<span class="normal">497</span>
-<span class="normal">498</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_difference</span><span class="p">(</span>
+<span class="normal">496</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_difference</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">col_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
@@ -2198,7 +2201,10 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
     <span class="n">curr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
     <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">out</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">-</span> <span class="n">lag</span>
-    <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2357,13 +2363,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 
           <details class="quote">
             <summary>Source code in <code>tslib/pandas_api.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">280</span>
 <span class="normal">281</span>
 <span class="normal">282</span>
 <span class="normal">283</span>
@@ -2449,12 +2449,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 <span class="normal">363</span>
 <span class="normal">364</span>
 <span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span>
-<span class="normal">368</span>
-<span class="normal">369</span>
-<span class="normal">370</span>
-<span class="normal">371</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_lag</span><span class="p">(</span>
+<span class="normal">366</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_lag</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">col_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
@@ -2523,35 +2518,24 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">column_string</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">name</span>
 
+    <span class="n">time_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span> <span class="k">else</span> <span class="s2">&quot;__offsets_since_epoch__&quot;</span>
+    <span class="n">freq</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span> <span class="k">else</span> <span class="n">ts</span><span class="o">.</span><span class="n">freq</span><span class="o">.</span><span class="n">n</span>
     <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
-            <span class="c1"># pessimisation: we can&#39;t reliably predict the next element of the series</span>
-            <span class="c1"># if the column is a date, so we have to use the &quot;complete&quot; time series.</span>
-            <span class="c1"># Thus, tsfill the data and then use the &quot;shift&quot;-based lag method.</span>
-            <span class="c1"># Then filter to the original series.</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span><span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">,</span><span class="n">keep_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">out</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">column_string</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">back</span><span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">]]</span>
-            <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-            <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">]})</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">time_col</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">time_col</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">]})</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">time_col</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">ts_args</span><span class="p">)</span><span class="o">.</span><span class="n">tsfill</span><span class="p">(</span><span class="n">sentinel</span><span class="o">=</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">,</span><span class="n">keep_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">out</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">)[</span><span class="n">column_string</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">back</span><span class="p">)</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">]]</span>
-            <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s2">&quot;__sentinel__&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-            <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-            <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">],</span> <span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">:</span><span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">]})</span>
-            <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span><span class="p">,</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">ts</span><span class="o">.</span><span class="n">ts_column_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">lagged_col</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">time_col</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">freq</span> <span class="o">*</span> <span class="n">back</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">time_col</span><span class="p">:</span> <span class="n">lagged_col</span><span class="p">,</span> <span class="n">col_name</span><span class="p">:</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">column_string</span><span class="p">],</span> <span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">:</span><span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">]})</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">new</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">time_col</span><span class="p">,</span><span class="n">ts</span><span class="o">.</span><span class="n">panel_column_name</span><span class="p">],</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">)</span>
 
     <span class="n">out</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">ts</span><span class="o">.</span><span class="n">is_date</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;__offsets_since_epoch__&quot;</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">out</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2710,7 +2694,12 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 
           <details class="quote">
             <summary>Source code in <code>tslib/pandas_api.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">373</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
 <span class="normal">374</span>
 <span class="normal">375</span>
 <span class="normal">376</span>
@@ -2763,12 +2752,7 @@ Defaults to the existing PandasOpts arguments from <code>ts()</code></p>
 <span class="normal">423</span>
 <span class="normal">424</span>
 <span class="normal">425</span>
-<span class="normal">426</span>
-<span class="normal">427</span>
-<span class="normal">428</span>
-<span class="normal">429</span>
-<span class="normal">430</span>
-<span class="normal">431</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_lead</span><span class="p">(</span>
+<span class="normal">426</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">with_lead</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">col_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">column</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>

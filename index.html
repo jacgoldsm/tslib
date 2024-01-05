@@ -298,15 +298,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#note" class="md-nav__link">
-    <span class="md-ellipsis">
-      Note
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#getting-startedtime-series-data" class="md-nav__link">
     <span class="md-ellipsis">
       Getting Started—Time-Series Data
@@ -532,15 +523,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#note" class="md-nav__link">
-    <span class="md-ellipsis">
-      Note
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#getting-startedtime-series-data" class="md-nav__link">
     <span class="md-ellipsis">
       Getting Started—Time-Series Data
@@ -601,9 +583,6 @@
 <h2 id="installation">Installation</h2>
 <p><code>tslib</code> is not currently on PyPI. Install from GitHub with:</p>
 <p><code>pip install tslib@git+https://github.com/jacgoldsm/tslib</code></p>
-<h2 id="note">Note</h2>
-<p><code>tslib</code> works with dates stored as numbers or as dates/timestamps, but it will almost always be more efficient
-with integer dates, especially with PySpark.</p>
 <h2 id="getting-startedtime-series-data">Getting Started—Time-Series Data</h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">tslib.pandas_api</span> <span class="kn">import</span> <span class="n">TimeOpts</span>
@@ -842,6 +821,7 @@ mkdocs<span class="w"> </span>build
 </code></pre></div>
 <p>See what it looks like on a local server with <code>mkdocs serve</code>.
 Once it looks right, deploy with <code>mkdocs gh-deploy</code>.</p>
+<p>Once it's deployed, delete the site/ repository so it doesn't pollute the main branch.</p>
 
 
 
