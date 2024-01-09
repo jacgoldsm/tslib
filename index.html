@@ -585,7 +585,7 @@
 <p><code>pip install tslib@git+https://github.com/jacgoldsm/tslib</code></p>
 <h2 id="getting-startedtime-series-data">Getting Started—Time-Series Data</h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">from</span> <span class="nn">tslib.pandas_api</span> <span class="kn">import</span> <span class="n">TimeOpts</span>
+<span class="kn">from</span> <span class="nn">tslib.pandas_api</span> <span class="kn">import</span> <span class="n">PandasOpts</span>
 
 <span class="c1"># Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.</span>
 <span class="n">cookies</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
@@ -610,7 +610,7 @@
 <span class="mi">4</span>  <span class="mi">2008</span>             <span class="n">M</span><span class="o">&amp;</span><span class="n">M</span>  <span class="mi">40</span>
 <span class="c1"># Define our time series arguments. </span>
 <span class="c1"># Set the time-series column, frequency, and start of the time-series.</span>
-<span class="n">cookies_args</span> <span class="o">=</span> <span class="n">TimeOpts</span><span class="p">(</span><span class="n">ts_column</span><span class="o">=</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1999</span><span class="p">)</span>
+<span class="n">cookies_args</span> <span class="o">=</span> <span class="n">PandasOpts</span><span class="p">(</span><span class="n">ts_column</span><span class="o">=</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1999</span><span class="p">)</span>
 <span class="c1"># define our time-series DataFrame</span>
 <span class="n">cookies_ts</span> <span class="o">=</span> <span class="n">cookies</span><span class="o">.</span><span class="n">ts</span><span class="p">(</span><span class="n">cookies_args</span><span class="p">)</span>
 <span class="c1"># create a DataFrame with all the gaps in the time-series filled in</span>
@@ -655,7 +655,7 @@
 </code></pre></div>
 <h2 id="getting-started-panel-data">Getting Started: Panel Data</h2>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">from</span> <span class="nn">tslib.pandas_api</span> <span class="kn">import</span> <span class="n">TimeOpts</span>
+<span class="kn">from</span> <span class="nn">tslib.pandas_api</span> <span class="kn">import</span> <span class="n">PandasOpts</span>
 
 <span class="c1"># Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.</span>
 <span class="n">dates</span> <span class="o">=</span> <span class="p">[</span>
@@ -712,7 +712,7 @@
 <span class="mi">11</span>   <span class="mi">2</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">800</span>
 <span class="mi">12</span>   <span class="mi">3</span> <span class="mi">2000</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">01</span>   <span class="n">f</span>           <span class="mi">630</span>
 <span class="c1"># define our Time-Series options</span>
-<span class="n">panel_args</span> <span class="o">=</span> <span class="n">TimeOpts</span><span class="p">(</span>
+<span class="n">panel_args</span> <span class="o">=</span> <span class="n">PandasOpts</span><span class="p">(</span>
     <span class="n">ts_column</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
     <span class="n">panel_column</span><span class="o">=</span><span class="n">panel</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
     <span class="n">start</span><span class="o">=</span><span class="s2">&quot;1999-12-01&quot;</span><span class="p">,</span>
