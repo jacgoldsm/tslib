@@ -10,11 +10,10 @@ See complete documentation [here](https://jacgoldsm.github.io/tslib/).
 
 `pip install tslib@git+https://github.com/jacgoldsm/tslib`
 
-
 ## Getting Started—Time-Series Data
 ```python
 import pandas as pd
-from tslib.pandas_api import TimeOpts
+from tslib.pandas_api import PandasOpts
 
 # Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.
 cookies = pd.DataFrame(
@@ -39,7 +38,7 @@ print(cookies)
 4  2008             M&M  40
 # Define our time series arguments. 
 # Set the time-series column, frequency, and start of the time-series.
-cookies_args = TimeOpts(ts_column="year", freq=1, start=1999)
+cookies_args = PandasOpts(ts_column="year", freq=1, start=1999)
 # define our time-series DataFrame
 cookies_ts = cookies.ts(cookies_args)
 # create a DataFrame with all the gaps in the time-series filled in
@@ -86,7 +85,7 @@ print(cookies_ts.with_difference("change_in_panelists",column="n"))
 ## Getting Started: Panel Data
 ```python
 import pandas as pd
-from tslib.pandas_api import TimeOpts
+from tslib.pandas_api import PandasOpts
 
 # Define our Data Frame. `tslib` works with dates stored as numbers or as Pandas dates.
 dates = [
@@ -143,7 +142,7 @@ print(panel)
 11   2 2000-09-01   f           800
 12   3 2000-09-01   f           630
 # define our Time-Series options
-panel_args = TimeOpts(
+panel_args = PandasOpts(
     ts_column="date",
     panel_column=panel["id"],
     start="1999-12-01",
